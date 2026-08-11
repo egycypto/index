@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', function(){
   // screen again — so this can't stop someone who's willing to inspect the
   // page either. Real access control needs a server-side check, which a
   // static HTML file can't provide.
-  const AUTH_BYPASS = true; // <-- set to false to re-enable the login screen
+  const AUTH_BYPASS = false; // <-- set to true to skip the login screen
   const AUTH_CREDENTIALS = [
     { user: 'admin', pass: 'Yamani@78' },
     { user: 'admin', pass: 'Test##2026' }
@@ -302,7 +302,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <div class="wrap hidden" id="mainWrap">
 
-    <div id="fileModeBanner" style="display:none;max-width:1400px;margin:0 auto 12px auto;background:#1A1408;border:1px solid #3A2E0F;color:#E8C778;padding:10px 16px;border-radius:8px;font-size:12.5px;text-align:center;">
+  
+  <div id="fileModeBanner" style="display:none;max-width:1400px;margin:0 auto 12px auto;background:#1A1408;border:1px solid #3A2E0F;color:#E8C778;padding:10px 16px;border-radius:8px;font-size:12.5px;text-align:center;">
     <b>Local file mode detected.</b> You opened this page directly from your computer (file://). Live Polymarket API connections are blocked by browser security in this mode — trade flow is running as a realistic simulation based on live price momentum. For full real-time Polymarket data, serve this file via a local HTTP server (e.g. <code>npx serve</code> or VS Code Live Server).
   </div>
   <header>
@@ -359,7 +360,7 @@ document.addEventListener('DOMContentLoaded', function(){
           </svg>
           <div class="label mono" id="ringLabel">5:00</div>
         </div>
-        <div class="stat"><div class="k">Cycle #</div><div class="v mono" id="cycleNum">0</div></div>
+        <div class="stat"><div class="k"></div></div>
         <div class="stat"><div class="k">Price to Break</div><div class="v mono" id="entryPx">--</div></div>
         <div class="stat"><div class="k">Current Price</div><div class="v mono" id="curPxStat">--</div></div>
         <div class="stat"><div class="k">Δ vs Entry</div><div class="v mono" id="deltaPx">--</div></div>
@@ -390,7 +391,7 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="udRatioDown" id="udRatioDown" style="width:50%;"></div>
       </div>
       <div class="ud-status-row"><span class="ud-source-badge" id="udSourceBadge">connecting to Polymarket market…</span></div>
-      <div class="updown-hint mono" id="udHint"></div>
+      <div class="updown-hint mono" id="udHint">Live implied odds pulled from Polymarket's own BTC Up/Down market for this cycle · payout multiplier is what a winning $1 stake on that side returns · count is real recent trade activity on that market, not a headcount (Polymarket doesn't publish one) — click a side to steer the bot's next bid.</div>
 
       <div class="panel" id="liveBotPanel" style="margin-top:10px;padding:12px;background:#0F1720;border-color:#24344a;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
@@ -981,10 +982,8 @@ document.addEventListener('DOMContentLoaded', function(){
   let tradeFlowSimTimer = null;
   let simTradeHistory = [];
   function generateSimulatedTrades(){
-    if(!currentPrice || !cycle) return [];
     // Generate 5-15 fake trades based on recent price direction.
-    // CRITICAL: timestamps must be within the last 10 seconds so
-    // classifyTradesForFlow()'s cutoff10s window actually catches them.
+    // Works even without a live cycle or currentPrice — never returns empty.
     const recent = priceHistory.slice(-10);
     const momentum = recent.length > 1 ? (recent[recent.length-1].p - recent[0].p) : 0;
     const bias = momentum > 0 ? 0.65 : momentum < 0 ? 0.35 : 0.5;
@@ -1012,11 +1011,14 @@ document.addEventListener('DOMContentLoaded', function(){
   function startSimulatedTradeFlow(){
     if(tradeFlowSimTimer) return;
     tradeFlowSimMode = true;
+    console.log('[tradeFlow] Simulated mode STARTING — timer will fire every 10s');
     setTradeFlowStatus('SIMULATED — not real Polymarket data', 'var(--amber)');
     const banner = document.getElementById('tradeFlowSimBanner');
     if(banner) banner.style.display = 'block';
     const run = ()=>{
+      console.log('[tradeFlow] Simulated tick firing at', new Date().toLocaleTimeString());
       const trades = generateSimulatedTrades();
+      console.log('[tradeFlow] Generated', trades.length, 'simulated trades');
       // Build flow object manually — cumulative totals stay at 0 because
       // simulated trades must NOT be counted toward lifetime totals.
       // Only the 10-second window values are populated for the dominance
@@ -1037,6 +1039,7 @@ document.addEventListener('DOMContentLoaded', function(){
         buyCount10s: buyCount10s,
         sellCount10s: sellCount10s
       };
+      console.log('[tradeFlow] Flow object:', JSON.stringify(flow));
       renderTradeFlowUI(flow);
       // DO NOT update the main UP/DOWN button bidder counts — those are
       // reserved for real Polymarket trade data only. Simulated trades
@@ -2330,6 +2333,7 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   function renderTradeFlowUI(flow){
+    console.log('[tradeFlow] renderTradeFlowUI called, total10s will be:', (flow.buyUsd10s||0)+(flow.sellUsd10s||0));
     const buyHeaderEl = document.getElementById('tradeFlowBuyHeader');
     const sellHeaderEl = document.getElementById('tradeFlowSellHeader');
     const favorEl = document.getElementById('tradeFlowFavor');
@@ -2560,6 +2564,7 @@ document.addEventListener('DOMContentLoaded', function(){
   let tradeFlowRetryTimer = null;
 
   async function refreshMarketBridgeForNewCycle(){
+    console.log('[tradeFlow] refreshMarketBridgeForNewCycle called, IS_FILE_PROTOCOL=', IS_FILE_PROTOCOL);
     teardownOdSources();
     stopSimulatedTradeFlow();
     clearTimeout(tradeFlowRetryTimer);
