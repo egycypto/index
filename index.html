@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CYCLE // 5m Bid Bot Simulator</title>
+<title>CYCLE BTC Up Down 5m Bid Bot Simulator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
@@ -302,16 +302,14 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <div class="wrap hidden" id="mainWrap">
 
-  
-
-  <div id="fileModeBanner" style="display:none;max-width:1400px;margin:0 auto 12px auto;background:#1A1408;border:1px solid #3A2E0F;color:#E8C778;padding:10px 16px;border-radius:8px;font-size:12.5px;text-align:center;">
+    <div id="fileModeBanner" style="display:none;max-width:1400px;margin:0 auto 12px auto;background:#1A1408;border:1px solid #3A2E0F;color:#E8C778;padding:10px 16px;border-radius:8px;font-size:12.5px;text-align:center;">
     <b>Local file mode detected.</b> You opened this page directly from your computer (file://). Live Polymarket API connections are blocked by browser security in this mode — trade flow is running as a realistic simulation based on live price momentum. For full real-time Polymarket data, serve this file via a local HTTP server (e.g. <code>npx serve</code> or VS Code Live Server).
   </div>
   <header>
     <div class="brand">
       <div class="dot" id="liveDot"></div>
       <div>
-        <h1>BID-BOT BTC Up Down 5m CYCLE </h1>
+        <h1>BID-BOT // 5m CYCLE SIMULATOR</h1>
         <span class="sub" id="connStatus">connecting to live feed…</span>
       </div>
     </div>
@@ -392,7 +390,7 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="udRatioDown" id="udRatioDown" style="width:50%;"></div>
       </div>
       <div class="ud-status-row"><span class="ud-source-badge" id="udSourceBadge">connecting to Polymarket market…</span></div>
-      <div class="updown-hint mono" id="udHint">Live implied odds pulled from Polymarket's own BTC Up/Down market for this cycle · payout multiplier is what a winning $1 stake on that side returns · count is real recent trade activity on that market, not a headcount (Polymarket doesn't publish one) — click a side to steer the bot's next bid.</div>
+      <div class="updown-hint mono" id="udHint"></div>
 
       <div class="panel" id="liveBotPanel" style="margin-top:10px;padding:12px;background:#0F1720;border-color:#24344a;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
@@ -448,6 +446,7 @@ document.addEventListener('DOMContentLoaded', function(){
     <div class="mono" id="tradeFlowPanel" style="margin-top:10px;" title="Real Polymarket trade activity on this cycle's market, recomputed every 10 seconds — not a simulation.">
       <div id="tradeFlowFavor" style="text-align:center;font-size:15px;font-weight:700;letter-spacing:.03em;color:var(--muted);padding:6px 0;">TRADING TRAFFIC</div>
       <div id="tradeFlowStatus" style="text-align:center;font-size:11px;color:var(--amber);padding:2px 0;margin-bottom:6px;">Initializing…</div>
+      <div id="tradeFlowSimBanner" style="display:none;text-align:center;font-size:11px;font-weight:700;letter-spacing:.06em;color:#1A1408;background:var(--amber);padding:4px 10px;border-radius:4px;margin-bottom:8px;">⚠ SIMULATED MODE — NOT REAL POLYMARKET DATA</div>
       <div style="text-align:center;margin-bottom:8px;"><button id="btnRetryTradeFlow" type="button" style="font-size:11px;padding:4px 10px;">Retry Connection</button></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <div id="tradeFlowBuyBox" style="flex:1;min-width:220px;padding:10px 12px;background:#0B0F14;border:1px solid var(--up);border-radius:6px;">
@@ -462,11 +461,16 @@ document.addEventListener('DOMContentLoaded', function(){
         </div>
       </div>
       <div id="tradeFlowDominance" style="margin-top:10px;padding:10px 12px;background:#0B0F14;border:1px solid var(--border);border-radius:6px;text-align:center;font-size:14px;font-weight:700;letter-spacing:.03em;color:var(--muted);">
-        <span id="tradeFlowDominanceLabel">--</span>
-        <span class="mono" id="tradeFlowDominanceRatio" style="margin-left:8px;font-size:13px;color:var(--text);"></span>
-        <span class="mono" id="tradeFlowDominancePct" style="margin-left:8px;font-size:13px;"></span>
-        <span class="mono" id="tradeFlowDominanceTps" style="margin-left:8px;font-size:12px;"></span>
-        <span class="mono" id="tradeFlowDominanceTotal" style="margin-left:12px;font-size:11px;color:var(--muted);"></span>
+        <div style="margin-bottom:6px;">
+          <span id="tradeFlowDominanceLabel">--</span>
+          <span class="mono" id="tradeFlowDominanceRatio" style="margin-left:8px;font-size:13px;color:var(--text);"></span>
+          <span class="mono" id="tradeFlowDominancePct" style="margin-left:8px;font-size:13px;"></span>
+          <span class="mono" id="tradeFlowDominanceTps" style="margin-left:8px;font-size:12px;"></span>
+        </div>
+        <div class="mono" style="font-size:12px;color:var(--text);margin-bottom:4px;">
+          <span id="tradeFlowDominanceBtc">--</span>
+        </div>
+        <span class="mono" id="tradeFlowDominanceTotal" style="font-size:11px;color:var(--muted);"></span>
         <span id="tradeFlowDominanceEqualWrap" style="display:none;">
           <span style="color:var(--border);margin:0 10px;">|</span>
           <span id="tradeFlowDominanceLabel2" style="font-size:14px;font-weight:700;"></span>
@@ -978,10 +982,12 @@ document.addEventListener('DOMContentLoaded', function(){
   let simTradeHistory = [];
   function generateSimulatedTrades(){
     if(!currentPrice || !cycle) return [];
-    // Generate 5-15 fake trades based on recent price direction
+    // Generate 5-15 fake trades based on recent price direction.
+    // CRITICAL: timestamps must be within the last 10 seconds so
+    // classifyTradesForFlow()'s cutoff10s window actually catches them.
     const recent = priceHistory.slice(-10);
     const momentum = recent.length > 1 ? (recent[recent.length-1].p - recent[0].p) : 0;
-    const bias = momentum > 0 ? 0.6 : momentum < 0 ? 0.4 : 0.5;
+    const bias = momentum > 0 ? 0.65 : momentum < 0 ? 0.35 : 0.5;
     const count = 5 + Math.floor(Math.random() * 11);
     const now = Date.now() / 1000;
     const trades = [];
@@ -991,8 +997,10 @@ document.addEventListener('DOMContentLoaded', function(){
       const outcome = isBuy ? 'Yes' : 'No';
       const size = 0.5 + Math.random() * 4.5;
       const price = 0.45 + Math.random() * 0.1;
+      // Spread timestamps across the last 8 seconds so they all land
+      // inside the 10-second window that classifyTradesForFlow uses
       trades.push({
-        timestamp: now - Math.random() * 120,
+        timestamp: now - Math.random() * 8,
         side: side,
         outcome: outcome,
         size: size,
@@ -1004,18 +1012,35 @@ document.addEventListener('DOMContentLoaded', function(){
   function startSimulatedTradeFlow(){
     if(tradeFlowSimTimer) return;
     tradeFlowSimMode = true;
-    setTradeFlowStatus('SIMULATED — real Polymarket API unreachable', 'var(--amber)');
+    setTradeFlowStatus('SIMULATED — not real Polymarket data', 'var(--amber)');
+    const banner = document.getElementById('tradeFlowSimBanner');
+    if(banner) banner.style.display = 'block';
     const run = ()=>{
       const trades = generateSimulatedTrades();
-      const flow = classifyTradesForFlow(trades);
+      // Build flow object manually — cumulative totals stay at 0 because
+      // simulated trades must NOT be counted toward lifetime totals.
+      // Only the 10-second window values are populated for the dominance
+      // row and the BUY/SELL header percentages.
+      let buyUsd10s=0, sellUsd10s=0, buyCount10s=0, sellCount10s=0;
+      trades.forEach(t=>{
+        const usd = (t.size||0)*(t.price||0);
+        if(t.side==='BUY'){ buyUsd10s+=usd; buyCount10s++; }
+        else if(t.side==='SELL'){ sellUsd10s+=usd; sellCount10s++; }
+      });
+      const flow = {
+        buyCountCum: 0,      // NEVER count simulated toward cumulative
+        sellCountCum: 0,
+        buyUsdCum: 0,
+        sellUsdCum: 0,
+        buyUsd10s: buyUsd10s,
+        sellUsd10s: sellUsd10s,
+        buyCount10s: buyCount10s,
+        sellCount10s: sellCount10s
+      };
       renderTradeFlowUI(flow);
-      // Also update bidder counts
-      const upCount = trades.filter(t=>/up|yes/i.test(t.outcome)).length;
-      const downCount = trades.filter(t=>/down|no/i.test(t.outcome)).length;
-      if(udUpBiddersEl) udUpBiddersEl.textContent = upCount.toLocaleString();
-      if(udDownBiddersEl) udDownBiddersEl.textContent = downCount.toLocaleString();
-      if(realUdUpBiddersEl) realUdUpBiddersEl.textContent = upCount.toLocaleString();
-      if(realUdDownBiddersEl) realUdDownBiddersEl.textContent = downCount.toLocaleString();
+      // DO NOT update the main UP/DOWN button bidder counts — those are
+      // reserved for real Polymarket trade data only. Simulated trades
+      // must be completely isolated from any real-looking UI elements.
     };
     run();
     tradeFlowSimTimer = setInterval(run, 10000);
@@ -1023,6 +1048,8 @@ document.addEventListener('DOMContentLoaded', function(){
   function stopSimulatedTradeFlow(){
     tradeFlowSimMode = false;
     if(tradeFlowSimTimer){ clearInterval(tradeFlowSimTimer); tradeFlowSimTimer = null; }
+    const banner = document.getElementById('tradeFlowSimBanner');
+    if(banner) banner.style.display = 'none';
   }
 
   // ---------- Real Polymarket Up/Down market bridge state ----------
@@ -2316,13 +2343,25 @@ document.addEventListener('DOMContentLoaded', function(){
     const buyPct10s = total10s>0 ? (flow.buyUsd10s/total10s*100) : 0;
     const sellPct10s = total10s>0 ? (flow.sellUsd10s/total10s*100) : 0;
 
-    buyHeaderEl.textContent = total10s>0 ? `BUY ~${fmtFlowBtc(flow.buyUsd10s)} ~${buyPct10s.toFixed(0)}%` : 'BUY ~0 BTC ~0%';
-    sellHeaderEl.textContent = total10s>0 ? `SELL ~${fmtFlowBtc(flow.sellUsd10s)} ~${sellPct10s.toFixed(0)}%` : 'SELL ~0 BTC ~0%';
+    if(tradeFlowSimMode && total10s>0){
+      buyHeaderEl.textContent = `BUY ~${fmtFlowBtc(flow.buyUsd10s)} ~${buyPct10s.toFixed(0)}% [SIM]`;
+      sellHeaderEl.textContent = `SELL ~${fmtFlowBtc(flow.sellUsd10s)} ~${sellPct10s.toFixed(0)}% [SIM]`;
+    } else {
+      buyHeaderEl.textContent = total10s>0 ? `BUY ~${fmtFlowBtc(flow.buyUsd10s)} ~${buyPct10s.toFixed(0)}%` : 'BUY ~0 BTC ~0%';
+      sellHeaderEl.textContent = total10s>0 ? `SELL ~${fmtFlowBtc(flow.sellUsd10s)} ~${sellPct10s.toFixed(0)}%` : 'SELL ~0 BTC ~0%';
+    }
 
-    if(buyCountEl) buyCountEl.textContent = flow.buyCountCum.toLocaleString();
-    if(sellCountEl) sellCountEl.textContent = flow.sellCountCum.toLocaleString();
-    if(buyTotalEl) buyTotalEl.textContent = flow.buyCountCum>0 ? `${fmtFlowUsd(flow.buyUsdCum)} / ${fmtFlowBtc(flow.buyUsdCum)}` : '--';
-    if(sellTotalEl) sellTotalEl.textContent = flow.sellCountCum>0 ? `${fmtFlowUsd(flow.sellUsdCum)} / ${fmtFlowBtc(flow.sellUsdCum)}` : '--';
+    if(tradeFlowSimMode){
+      if(buyCountEl) buyCountEl.textContent = '--';
+      if(sellCountEl) sellCountEl.textContent = '--';
+      if(buyTotalEl) buyTotalEl.textContent = '--';
+      if(sellTotalEl) sellTotalEl.textContent = '--';
+    } else {
+      if(buyCountEl) buyCountEl.textContent = flow.buyCountCum.toLocaleString();
+      if(sellCountEl) sellCountEl.textContent = flow.sellCountCum.toLocaleString();
+      if(buyTotalEl) buyTotalEl.textContent = flow.buyCountCum>0 ? `${fmtFlowUsd(flow.buyUsdCum)} / ${fmtFlowBtc(flow.buyUsdCum)}` : '--';
+      if(sellTotalEl) sellTotalEl.textContent = flow.sellCountCum>0 ? `${fmtFlowUsd(flow.sellUsdCum)} / ${fmtFlowBtc(flow.sellUsdCum)}` : '--';
+    }
 
     if(favorEl){
       if(total10s<=0){
@@ -2340,11 +2379,12 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     }
 
-    // Dominance row: higher side gets displayed with BTC ratio + share percentage + TPS
+    // Dominance row: higher side gets displayed with BTC ratio + share percentage + TPS + total BTC
     const domLabel = document.getElementById('tradeFlowDominanceLabel');
     const domRatio = document.getElementById('tradeFlowDominanceRatio');
     const domPct = document.getElementById('tradeFlowDominancePct');
     const domTps = document.getElementById('tradeFlowDominanceTps');
+    const domBtc = document.getElementById('tradeFlowDominanceBtc');
     const domTotal = document.getElementById('tradeFlowDominanceTotal');
     const domBox = document.getElementById('tradeFlowDominance');
     const domEqualWrap = document.getElementById('tradeFlowDominanceEqualWrap');
@@ -2359,55 +2399,69 @@ document.addEventListener('DOMContentLoaded', function(){
         domRatio.textContent = '';
         domPct.textContent = '';
         domTps.textContent = '';
+        if(domBtc) domBtc.textContent = '';
         if(domTotal) domTotal.textContent = '';
         domBox.style.borderColor = 'var(--border)';
         domBox.style.color = 'var(--muted)';
         if(domEqualWrap) domEqualWrap.style.display = 'none';
       } else {
+        // Only hide sim banner when real data arrives; simulated mode keeps it
+        if(!tradeFlowSimMode){
+          const banner = document.getElementById('tradeFlowSimBanner');
+          if(banner) banner.style.display = 'none';
+        }
         const buyBtc = flow.buyUsd10s/currentPrice;
         const sellBtc = flow.sellUsd10s/currentPrice;
         const totalTx = flow.buyCountCum + flow.sellCountCum;
-        if(domTotal) domTotal.textContent = 'TOTAL: '+totalTx;
+        const totalBtc = buyBtc + sellBtc;
+        if(domTotal) domTotal.textContent = tradeFlowSimMode ? 'SIMULATED — NOT REAL DATA' : 'TOTAL TX: '+totalTx;
+        if(domBtc){
+          if(tradeFlowSimMode){
+            domBtc.innerHTML = '<span style="color:var(--amber);">⚠ SIMULATED</span>  <span style="color:var(--muted);">·</span>  <span style="color:var(--up);">▲ BUYS '+buyBtc.toFixed(4)+' BTC</span>  <span style="color:var(--muted);">·</span>  <span style="color:var(--down);">▼ SELLS '+sellBtc.toFixed(4)+' BTC</span>';
+          } else {
+            domBtc.innerHTML = '<span style="color:var(--up);">▲ BUYS '+buyBtc.toFixed(4)+' BTC</span>  <span style="color:var(--muted);">·</span>  <span style="color:var(--down);">▼ SELLS '+sellBtc.toFixed(4)+' BTC</span>  <span style="color:var(--muted);">·</span>  <span style="color:var(--text);">Σ '+totalBtc.toFixed(4)+' BTC</span>';
+          }
+        }
         if(domEqualWrap) domEqualWrap.style.display = 'none';
         if(buyBtc > sellBtc){
           const ratio = sellBtc > 0 ? (buyBtc/sellBtc).toFixed(2) : '∞';
           const share = total10s>0 ? (flow.buyUsd10s/total10s*100).toFixed(1) : '0.0';
-          domLabel.textContent = 'BUYS';
+          domLabel.textContent = tradeFlowSimMode ? '[SIM] BUYS DOMINATE' : 'BUYS DOMINATE';
           domLabel.style.color = 'var(--up)';
-          domRatio.textContent = ratio+'× Sells (BTC)';
+          domRatio.textContent = ratio+'× vs Sells';
           domRatio.style.color = 'var(--text)';
           domPct.textContent = share+'% of flow';
           domPct.style.color = 'var(--up)';
-          domTps.textContent = 'TPS: '+flow.buyCountCum;
-          domTps.style.color = 'var(--up)';
+          domTps.textContent = tradeFlowSimMode ? 'SIM TPS: '+flow.buyCount10s : 'TPS: '+flow.buyCountCum;
+          domTps.style.color = tradeFlowSimMode ? 'var(--amber)' : 'var(--up)';
           domBox.style.borderColor = 'var(--up)';
           domBox.style.color = 'var(--text)';
         } else if(sellBtc > buyBtc){
           const ratio = buyBtc > 0 ? (sellBtc/buyBtc).toFixed(2) : '∞';
           const share = total10s>0 ? (flow.sellUsd10s/total10s*100).toFixed(1) : '0.0';
-          domLabel.textContent = 'SELLS';
+          domLabel.textContent = tradeFlowSimMode ? '[SIM] SELLS DOMINATE' : 'SELLS DOMINATE';
           domLabel.style.color = 'var(--down)';
-          domRatio.textContent = ratio+'× Buys (BTC)';
+          domRatio.textContent = ratio+'× vs Buys';
           domRatio.style.color = 'var(--text)';
           domPct.textContent = share+'% of flow';
           domPct.style.color = 'var(--down)';
-          domTps.textContent = 'TPS: '+flow.sellCountCum;
-          domTps.style.color = 'var(--down)';
+          domTps.textContent = tradeFlowSimMode ? 'SIM TPS: '+flow.sellCount10s : 'TPS: '+flow.sellCountCum;
+          domTps.style.color = tradeFlowSimMode ? 'var(--amber)' : 'var(--down)';
           domBox.style.borderColor = 'var(--down)';
           domBox.style.color = 'var(--text)';
         } else {
           // Equal: show both BUYS and SELLS data side by side
           if(domEqualWrap) domEqualWrap.style.display = 'inline';
-          domLabel.textContent = 'BUYS';
+          domLabel.textContent = tradeFlowSimMode ? '[SIM] BUYS' : 'BUYS';
           domLabel.style.color = 'var(--up)';
           domRatio.textContent = '1.00×';
           domRatio.style.color = 'var(--text)';
           domPct.textContent = '50.0%';
           domPct.style.color = 'var(--up)';
-          domTps.textContent = 'TPS: '+flow.buyCountCum;
-          domTps.style.color = 'var(--up)';
+          domTps.textContent = tradeFlowSimMode ? 'SIM TPS: '+flow.buyCount10s : 'TPS: '+flow.buyCountCum;
+          domTps.style.color = tradeFlowSimMode ? 'var(--amber)' : 'var(--up)';
           if(domLabel2){
-            domLabel2.textContent = 'SELLS';
+            domLabel2.textContent = tradeFlowSimMode ? '[SIM] SELLS' : 'SELLS';
             domLabel2.style.color = 'var(--down)';
           }
           if(domRatio2){
@@ -2419,8 +2473,8 @@ document.addEventListener('DOMContentLoaded', function(){
             domPct2.style.color = 'var(--down)';
           }
           if(domTps2){
-            domTps2.textContent = 'TPS: '+flow.sellCountCum;
-            domTps2.style.color = 'var(--down)';
+            domTps2.textContent = tradeFlowSimMode ? 'SIM TPS: '+flow.sellCount10s : 'TPS: '+flow.sellCountCum;
+            domTps2.style.color = tradeFlowSimMode ? 'var(--amber)' : 'var(--down)';
           }
           domBox.style.borderColor = 'var(--amber)';
           domBox.style.color = 'var(--text)';
