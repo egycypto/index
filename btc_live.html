@@ -1,0 +1,2620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bitcoin Live Price</title>
+<style>
+  body {
+    background: #0e0e10;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    padding: 20px;
+  }
+  #price {
+    font-size: 48px;
+    font-weight: bold;
+    margin: 20px 0;
+  }
+  #priceStickyBar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #0e0e10;
+    margin: -20px -20px 0 -20px;
+    padding: 14px 20px 10px 20px;
+    border-bottom: 1px solid #222;
+  }
+  #stickyTopRow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+  #priceBlock { flex: 0 0 auto; }
+  #priceStickyBar h1 {
+    margin: 0 0 6px 0;
+    font-size: 18px;
+  }
+  #priceStickyBar #price {
+    margin: 4px 0;
+  }
+  #priceStickyBar #sourceLabel {
+    margin-top: -4px !important;
+    margin-bottom: 4px !important;
+  }
+  /* Prediction hero, relocated into the sticky header next to the price —
+     same grid/classes as the standalone panel, just scaled down to fit
+     a header strip and dropped the bottom margin it had further down
+     the page. */
+  #priceStickyBar .sig-hero {
+    flex: 1 1 720px;
+    max-width: 1180px;
+    margin-bottom: 0;
+    align-self: stretch;
+  }
+  #priceStickyBar .sig-hero > div { padding: 8px 10px; }
+  #priceStickyBar .sig-lbl { font-size: 8.5px; margin-bottom: 3px; }
+  #priceStickyBar .sig-predBig { font-size: 16px; gap: 5px; }
+  #priceStickyBar .sig-sub { font-size: 8.5px; margin-top: 3px; }
+  #priceStickyBar .sig-metricVal { font-size: 16px; }
+  #priceStickyBar .sig-bartrack { margin-top: 5px; }
+  #priceStickyBar .sig-actbadge { font-size: 8.5px; padding: 2px 6px; margin-top: 6px !important; }
+  #priceStickyBar .sig-hero .flow-panel { padding: 8px 10px; border-radius: 6px; }
+  #priceStickyBar .sig-hero .flow-title { font-size: 9px; margin-bottom: 5px; }
+  #priceStickyBar .sig-hero .flow-row { font-size: 10px; }
+  #priceStickyBar .sig-hero .flow-value { font-size: 11px; }
+  .up { color: #4caf50; }
+  .down { color: #f44336; }
+  #flow-container {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    max-width: 720px;
+    margin: 0 auto 20px auto;
+  }
+  .flow-panel {
+    flex: 1;
+    border-radius: 8px;
+    padding: 14px 10px;
+    border: 1px solid;
+  }
+  .flow-panel.buy {
+    background: rgba(34,162,107,0.08);
+    border-color: #22a26b;
+  }
+  .flow-panel.sell {
+    background: rgba(225,79,71,0.08);
+    border-color: #e14f47;
+  }
+  .flow-title {
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+  .flow-panel.buy .flow-title { color: #22a26b; }
+  .flow-panel.sell .flow-title { color: #e14f47; }
+  .flow-panel.net {
+    background: rgba(255,255,255,0.04);
+    border-color: #555;
+    transition: background-color 0.2s, border-color 0.2s;
+  }
+  .flow-panel.net.dom-buy {
+    background: rgba(34,162,107,0.08);
+    border-color: #22a26b;
+  }
+  .flow-panel.net.dom-sell {
+    background: rgba(225,79,71,0.08);
+    border-color: #e14f47;
+  }
+  .flow-panel.net.dom-flat {
+    background: rgba(255,255,255,0.04);
+    border-color: #555;
+  }
+  .flow-panel.net .flow-title { color: #aaa; }
+  .flow-panel.net.dom-buy .flow-title { color: #22a26b; }
+  .flow-panel.net.dom-sell .flow-title { color: #e14f47; }
+  .flow-panel.net.dom-flat .flow-title { color: #aaa; }
+  .flow-row {
+    font-size: 12px;
+    color: #aaa;
+    margin-top: 6px;
+  }
+  .flow-value {
+    display: block;
+    font-size: 20px;
+    font-weight: bold;
+    color: #fff;
+    margin-top: 2px;
+  }
+
+  /* ---------- SIGNAL engine ---------- */
+  #sig-wrap { max-width: 720px; margin: 0 auto 20px auto; }
+  .sig-panel {
+    background: #1a1a1d; border: 1px solid #333; border-radius: 8px;
+    padding: 14px 16px; margin-bottom: 16px; text-align: left;
+  }
+  .sig-panel h3 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: #999;
+    margin: 0 0 12px 0; font-weight: bold; display: flex; justify-content: space-between; align-items: center;
+  }
+  .sig-panel h3 .sig-hint { font-size: 10px; text-transform: none; letter-spacing: 0; color: #555; font-weight: normal; }
+  .sig-hero { display: flex; flex-wrap: nowrap; gap: 0; border: 1px solid #333; border-radius: 8px; overflow-x: auto; overflow-y: hidden; margin-bottom: 16px; }
+  .sig-hero > div, .sig-hero .flow-panel { flex: 1 1 0; min-width: 108px; }
+  .sig-hero .flow-panel { border-radius: 0; border-top: none; border-bottom: none; border-right: 1px solid #333; }
+  .sig-hero .flow-panel:last-child { border-right: none; }
+  .sig-hero > div { padding: 16px; background: #17171a; border-right: 1px solid #333; }
+  .sig-hero > div:last-child { border-right: none; }
+  .sig-lbl { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; }
+  .sig-predBig { font-size: 28px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+  .sig-predBig.up { color: #22a26b; } .sig-predBig.down { color: #e14f47; } .sig-predBig.flat { color: #aaa; }
+  .sig-sub { font-size: 10.5px; color: #777; margin-top: 6px; }
+  .sig-metricVal { font-size: 26px; font-weight: bold; color: #fff; }
+  .sig-bartrack { height: 6px; background: #26262a; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+  .sig-barfill { height: 100%; border-radius: 4px; transition: width .4s ease; }
+  .sig-barfill.good { background: #22a26b; } .sig-barfill.mid { background: #e8b04b; } .sig-barfill.low { background: #e14f47; }
+  .sig-tag { font-size: 10px; color: #666; margin-top: 4px; }
+  .sig-tag.hit { color: #22a26b; }
+  table.sig-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  table.sig-table th { text-align: left; color: #888; font-weight: bold; padding: 5px 6px; border-bottom: 1px solid #333; text-transform: uppercase; font-size: 9.5px; letter-spacing: 0.4px; }
+  table.sig-table td { padding: 5px 6px; border-bottom: 1px solid #232326; }
+  .sig-corrbar-wrap { display: flex; align-items: center; gap: 6px; }
+  .sig-corrtrack { width: 60px; height: 6px; background: #26262a; border-radius: 3px; position: relative; flex-shrink: 0; }
+  .sig-corrfill { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+  .sig-corrfill.pos { background: #22a26b; left: 50%; }
+  .sig-corrfill.neg { background: #e14f47; right: 50%; }
+  .sig-corrmid { position: absolute; left: 50%; top: -1px; bottom: -1px; width: 1px; background: #444; }
+  .sig-wrow { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 11.5px; }
+  .sig-wrow .sig-wname { width: 130px; flex-shrink: 0; color: #999; }
+  .sig-wrow .sig-wtrack { flex: 1; height: 7px; background: #26262a; border-radius: 4px; position: relative; overflow: hidden; }
+  .sig-wrow .sig-wfillpos { position: absolute; left: 50%; top: 0; bottom: 0; background: #4a90e2; }
+  .sig-wrow .sig-wfillneg { position: absolute; right: 50%; top: 0; bottom: 0; background: #e8b04b; }
+  .sig-wrow .sig-wmid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: #444; }
+  .sig-wrow .sig-wval { width: 46px; text-align: right; flex-shrink: 0; color: #ccc; }
+  .sig-regime-active { display: flex; justify-content: space-between; align-items: center; background: #4a90e21a; border: 1px solid #4a90e255; border-radius: 6px; padding: 9px 11px; margin-bottom: 10px; }
+  .sig-regime-active .sig-rname { font-weight: bold; font-size: 12.5px; color: #4a90e2; }
+  .sig-regime-active .sig-rmeta { font-size: 10.5px; color: #888; margin-top: 2px; }
+  .sig-regtag { display: inline-block; padding: 1px 7px; border-radius: 9px; font-size: 9px; font-weight: bold; }
+  .sig-regtag.active { background: #4a90e233; color: #4a90e2; }
+  .sig-regtag.dormant { background: #33333340; color: #777; }
+  .sig-act-wrap { display: flex; align-items: stretch; gap: 16px; flex-wrap: wrap; }
+  .sig-act-badgecol { display: flex; flex-direction: column; justify-content: center; min-width: 140px; }
+  .sig-actbadge { display: inline-block; padding: 5px 12px; border-radius: 6px; font-size: 13px; font-weight: bold; letter-spacing: 0.4px; text-align: center; }
+  .sig-actbadge.calibrating { background: #33333340; color: #888; }
+  .sig-actbadge.very_low   { background: #4a90e222; color: #6fa8e8; }
+  .sig-actbadge.low        { background: #4ac0a222; color: #4ac0a2; }
+  .sig-actbadge.normal     { background: #22a26b22; color: #22a26b; }
+  .sig-actbadge.high       { background: #e8b04b22; color: #e8b04b; }
+  .sig-actbadge.very_high  { background: #e8823022; color: #e88230; }
+  .sig-actbadge.aggressive { background: #e14f4722; color: #e14f47; }
+  .sig-act-stats { display: flex; gap: 24px; flex-wrap: wrap; flex: 1; }
+  .sig-act-stat { min-width: 130px; }
+  .sig-act-stat .mono { font-size: 16px; color: #fff; font-weight: bold; }
+  .sig-feed { max-height: 200px; overflow-y: auto; font-size: 11px; line-height: 1.6; }
+  .sig-feed .sig-row { padding: 3px 0; border-bottom: 1px solid #232326; display: flex; gap: 8px; }
+  .sig-feed .sig-t { color: #555; flex-shrink: 0; }
+  .sig-feed .sig-msg.up { color: #22a26b; } .sig-feed .sig-msg.down { color: #e14f47; } .sig-feed .sig-msg.flat { color: #aaa; } .sig-feed .sig-msg.sys { color: #4a90e2; }
+  .sig-tbl-wrap { max-height: 190px; overflow-y: auto; }
+  .sig-settingsrow { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .sig-sctrl .sig-sk { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+  .sig-sctrl .sig-sv { font-size: 13px; font-weight: bold; color: #ccc; }
+  .sig-btnrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .sig-btn { background: #1a1a1d; color: #fff; border: 1px solid #444; border-radius: 6px; padding: 7px 12px; font-size: 11.5px; cursor: pointer; font-family: inherit; }
+  .sig-btn:hover { border-color: #666; }
+  .sig-btn.primary { background: #4a90e2; border-color: #4a90e2; color: #08141f; font-weight: bold; }
+  .sig-btn.danger { background: #2a1518; color: #e14f47; border-color: #4a2328; }
+  .sig-correct { color: #22a26b; font-weight: bold; }
+  .sig-wrong { color: #e14f47; font-weight: bold; }
+  input[type=range].sig-range { width: 100%; accent-color: #4a90e2; }
+</style>
+</head>
+<body>
+
+<div id="priceStickyBar">
+<div id="stickyTopRow">
+  <div id="priceBlock">
+    <h1>Bitcoin (BTC/USDT) — Live Price</h1>
+    <div id="price">Loading...</div>
+    <div id="sourceLabel" style="font-size:11px;color:#666;margin-top:-14px;margin-bottom:14px;">Connecting…</div>
+  </div>
+  <div class="sig-hero" id="sigHeroSticky">
+    <div>
+      <div class="sig-lbl">Predicted Direction</div>
+      <div class="sig-predBig flat" id="sigPredBig"><span id="sigPredArrow">●</span><span id="sigPredText">WARMING UP</span></div>
+      <div class="sig-sub" id="sigPredSub">Collecting baseline data — first call opens shortly.</div>
+      <span class="sig-actbadge calibrating" id="sigHeroActBadge" style="margin-top:8px;">CALIBRATING</span>
+    </div>
+    <div>
+      <div class="sig-lbl">Success Rate <span id="sigSuccessCount" style="color:#555;font-size:9.5px;"></span></div>
+      <div class="sig-metricVal" id="sigSuccessVal">--%</div>
+      <div class="sig-bartrack"><div class="sig-barfill low" id="sigSuccessBar" style="width:0%"></div></div>
+      <div class="sig-tag" id="sigSuccessTag">target 80%</div>
+    </div>
+    <div>
+      <div class="sig-lbl">Confidence Rate</div>
+      <div class="sig-metricVal" id="sigConfVal">--%</div>
+      <div class="sig-bartrack"><div class="sig-barfill low" id="sigConfBar" style="width:0%"></div></div>
+      <div class="sig-tag" id="sigConfTag">target 80%</div>
+    </div>
+    <div class="flow-panel net" id="netPanel5sMirror">
+      <div class="flow-title" id="netTitle5sMirror">NET BUY/SELL (5S)</div>
+      <div class="flow-row">Total Transactions (TPS):
+        <span class="flow-value" id="netTps5sMirror">0</span>
+      </div>
+      <div class="flow-row">Net Volume:
+        <span class="flow-value" id="netVolume5sMirror">0.00000</span> BTC
+      </div>
+    </div>
+    <div class="flow-panel net" id="netPanel10sMirror">
+      <div class="flow-title" id="netTitle10sMirror">NET BUY/SELL (10S)</div>
+      <div class="flow-row">Total Transactions (TPS):
+        <span class="flow-value" id="netTps10sMirror">0</span>
+      </div>
+      <div class="flow-row">Net Volume:
+        <span class="flow-value" id="netVolume10sMirror">0.00000</span> BTC
+      </div>
+    </div>
+    <div class="flow-panel net" id="netPanel15sMirror">
+      <div class="flow-title" id="netTitle15sMirror">NET BUY/SELL (15S)</div>
+      <div class="flow-row">Total Transactions (TPS):
+        <span class="flow-value" id="netTps15sMirror">0</span>
+      </div>
+      <div class="flow-row">Net Volume:
+        <span class="flow-value" id="netVolume15sMirror">0.00000</span> BTC
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div id="poly5m-container" style="max-width:720px;margin:0 auto 20px auto;border-radius:8px;border:1px solid #333;padding:16px;background:#1a1a1d;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div style="font-size:13px;font-weight:bold;letter-spacing:0.5px;color:#ccc;">BTC 5-MIN UP/DOWN <span style="font-size:10px;color:#666;font-weight:normal;">(Polymarket)</span></div>
+    <div id="poly5mTimer" style="font-size:22px;font-weight:bold;font-variant-numeric:tabular-nums;">--:--</div>
+  </div>
+  <div style="display:flex;gap:10px;">
+    <button id="poly5mUpBtn" title="Open market on Polymarket" style="flex:1;background:rgba(34,162,107,0.1);border:1px solid #22a26b;color:#22a26b;border-radius:6px;padding:14px 8px;cursor:pointer;font-family:inherit;">
+      <div style="font-size:13px;font-weight:bold;letter-spacing:1px;">UP</div>
+      <div style="font-size:26px;font-weight:bold;margin-top:4px;" id="poly5mUpPct">--%</div>
+      <div style="font-size:11px;color:#8fd6b4;margin-top:2px;">×<span id="poly5mUpMult">--</span></div>
+    </button>
+    <button id="poly5mDownBtn" title="Open market on Polymarket" style="flex:1;background:rgba(225,79,71,0.1);border:1px solid #e14f47;color:#e14f47;border-radius:6px;padding:14px 8px;cursor:pointer;font-family:inherit;">
+      <div style="font-size:13px;font-weight:bold;letter-spacing:1px;">DOWN</div>
+      <div style="font-size:26px;font-weight:bold;margin-top:4px;" id="poly5mDownPct">--%</div>
+      <div style="font-size:11px;color:#f2a19c;margin-top:2px;">×<span id="poly5mDownMult">--</span></div>
+    </button>
+  </div>
+  <div style="text-align:center;margin-top:10px;font-size:11px;color:#666;">
+    <span id="poly5mTrades">trades: —</span> · <span id="poly5mStatus">connecting…</span>
+  </div>
+  <div style="margin-top:10px;border-top:1px solid #333;padding-top:8px;">
+    <div style="font-size:10px;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Trades per cycle</div>
+    <div id="poly5mHistory" style="font-size:11px;color:#aaa;max-height:120px;overflow-y:auto;"></div>
+  </div>
+</div>
+
+<div id="flow-container">
+  <div class="flow-panel buy">
+    <div class="flow-title">BUY</div>
+    <div class="flow-row">Total Transactions (TPS):
+      <span class="flow-value" id="buyTps">0</span>
+    </div>
+    <div class="flow-row">Volume:
+      <span class="flow-value" id="buyVolume">0.00000</span> BTC
+    </div>
+  </div>
+  <div class="flow-panel sell">
+    <div class="flow-title">SELL</div>
+    <div class="flow-row">Total Transactions (TPS):
+      <span class="flow-value" id="sellTps">0</span>
+    </div>
+    <div class="flow-row">Volume:
+      <span class="flow-value" id="sellVolume">0.00000</span> BTC
+    </div>
+  </div>
+  <div class="flow-panel net" id="netPanel">
+    <div class="flow-title" id="netTitle">NET BUY/SELL</div>
+    <div class="flow-row">Total Transactions (TPS):
+      <span class="flow-value" id="netTps">0</span>
+    </div>
+    <div class="flow-row">Net Volume:
+      <span class="flow-value" id="netVolume">0.00000</span> BTC
+    </div>
+    <div style="margin-top:10px;border-top:1px solid #333;padding-top:8px;">
+      <div style="display:flex;gap:10px;">
+        <div class="flow-row" style="flex:1;color:#22a26b;">1H BUY
+          <span class="flow-value" id="hourBuyVolume" style="color:#22a26b;">Loading...</span> BTC
+        </div>
+        <div class="flow-row" style="flex:1;color:#e14f47;">1H SELL
+          <span class="flow-value" id="hourSellVolume" style="color:#e14f47;">Loading...</span> BTC
+        </div>
+      </div>
+      <div class="flow-row" style="margin-top:8px;">1H Net:
+        <span class="flow-value" id="hourNetVolume">Loading...</span> BTC
+      </div>
+      <div style="font-size:13px;font-weight:bold;margin-top:6px;letter-spacing:0.5px;" id="hourTrendLabel">—</div>
+      <div style="font-size:10px;color:#666;margin-top:4px;" id="hourResetLabel">backfilling trailing hour…</div>
+      <div style="font-size:10px;color:#666;margin-top:2px;" id="logStatusLabel">log: —</div>
+    </div>
+  </div>
+</div>
+
+<div id="flow-container-5s" style="display:flex;justify-content:center;gap:16px;max-width:720px;margin:0 auto 20px auto;">
+  <div class="flow-panel buy">
+    <div class="flow-title">BUY (5S)</div>
+    <div class="flow-row">Total Transactions (TPS):
+      <span class="flow-value" id="buyTps5s">0</span>
+    </div>
+    <div class="flow-row">Volume:
+      <span class="flow-value" id="buyVolume5s">0.00000</span> BTC
+    </div>
+  </div>
+  <div class="flow-panel sell">
+    <div class="flow-title">SELL (5S)</div>
+    <div class="flow-row">Total Transactions (TPS):
+      <span class="flow-value" id="sellTps5s">0</span>
+    </div>
+    <div class="flow-row">Volume:
+      <span class="flow-value" id="sellVolume5s">0.00000</span> BTC
+    </div>
+  </div>
+  <div class="flow-panel net" id="netPanel5s">
+    <div class="flow-title" id="netTitle5s">NET BUY/SELL (5S)</div>
+    <div class="flow-row">Total Transactions (TPS):
+      <span class="flow-value" id="netTps5s">0</span>
+    </div>
+    <div class="flow-row">Net Volume:
+      <span class="flow-value" id="netVolume5s">0.00000</span> BTC
+    </div>
+  </div>
+</div>
+
+<div id="flow-container-10s" style="display:flex;justify-content:center;gap:16px;max-width:720px;margin:0 auto 20px auto;">
+  <div class="flow-panel buy">
+    <div class="flow-title">BUY (10S)</div>
+    <div class="flow-row">Total Transactions (TPS):
+      <span class="flow-value" id="buyTps10s">0</span>
+    </div>
+    <div class="flow-row">Volume:
+      <span class="flow-value" id="buyVolume10s">0.00000</span> BTC
+    </div>
+  </div>
+  <div class="flow-panel sell">
+    <div class="flow-title">SELL (10S)</div>
+    <div class="flow-row">Total Transactions (TPS):
+      <span class="flow-value" id="sellTps10s">0</span>
+    </div>
+    <div class="flow-row">Volume:
+      <span class="flow-value" id="sellVolume10s">0.00000</span> BTC
+    </div>
+  </div>
+  <div class="flow-panel net" id="netPanel10s">
+    <div class="flow-title" id="netTitle10s">NET BUY/SELL (10S)</div>
+    <div class="flow-row">Total Transactions (TPS):
+      <span class="flow-value" id="netTps10s">0</span>
+    </div>
+    <div class="flow-row">Net Volume:
+      <span class="flow-value" id="netVolume10s">0.00000</span> BTC
+    </div>
+  </div>
+</div>
+
+<div id="flow-container-15s" style="display:flex;justify-content:center;gap:16px;max-width:720px;margin:0 auto 20px auto;">
+  <div class="flow-panel buy">
+    <div class="flow-title">BUY (15S)</div>
+    <div class="flow-row">Total Transactions (TPS):
+      <span class="flow-value" id="buyTps15s">0</span>
+    </div>
+    <div class="flow-row">Volume:
+      <span class="flow-value" id="buyVolume15s">0.00000</span> BTC
+    </div>
+  </div>
+  <div class="flow-panel sell">
+    <div class="flow-title">SELL (15S)</div>
+    <div class="flow-row">Total Transactions (TPS):
+      <span class="flow-value" id="sellTps15s">0</span>
+    </div>
+    <div class="flow-row">Volume:
+      <span class="flow-value" id="sellVolume15s">0.00000</span> BTC
+    </div>
+  </div>
+  <div class="flow-panel net" id="netPanel15s">
+    <div class="flow-title" id="netTitle15s">NET BUY/SELL (15S)</div>
+    <div class="flow-row">Total Transactions (TPS):
+      <span class="flow-value" id="netTps15s">0</span>
+    </div>
+    <div class="flow-row">Net Volume:
+      <span class="flow-value" id="netVolume15s">0.00000</span> BTC
+    </div>
+  </div>
+</div>
+
+<div id="flow-container-30s" style="display:flex;justify-content:center;gap:16px;max-width:720px;margin:0 auto 20px auto;">
+  <div class="flow-panel buy">
+    <div class="flow-title">BUY (30S)</div>
+    <div class="flow-row">Total Transactions (TPS):
+      <span class="flow-value" id="buyTps30s">0</span>
+    </div>
+    <div class="flow-row">Volume:
+      <span class="flow-value" id="buyVolume30s">0.00000</span> BTC
+    </div>
+  </div>
+  <div class="flow-panel sell">
+    <div class="flow-title">SELL (30S)</div>
+    <div class="flow-row">Total Transactions (TPS):
+      <span class="flow-value" id="sellTps30s">0</span>
+    </div>
+    <div class="flow-row">Volume:
+      <span class="flow-value" id="sellVolume30s">0.00000</span> BTC
+    </div>
+  </div>
+  <div class="flow-panel net" id="netPanel30s">
+    <div class="flow-title" id="netTitle30s">NET BUY/SELL (30S)</div>
+    <div class="flow-row">Total Transactions (TPS):
+      <span class="flow-value" id="netTps30s">0</span>
+    </div>
+    <div class="flow-row">Net Volume:
+      <span class="flow-value" id="netVolume30s">0.00000</span> BTC
+    </div>
+  </div>
+</div>
+
+<div id="sig-wrap">
+
+  <div class="sig-panel">
+    <h3>Correlation Matrix <span class="sig-hint">net transactions &amp; net volume vs. price move, per panel</span></h3>
+    <div class="sig-tbl-wrap">
+      <table class="sig-table">
+        <thead><tr><th>Panel</th><th>Net Tx Corr.</th><th>Net Volume Corr.</th></tr></thead>
+        <tbody id="sigCorrTbody"></tbody>
+      </table>
+    </div>
+    <div class="sig-tag" style="margin-top:8px;">Correlation runs from -1 (strongly opposes price direction) to +1 (strongly agrees). Bars fill from center; green = positive, red = negative. Feeds the engine's own feature weighting below.</div>
+  </div>
+
+  <div class="sig-panel">
+    <h3>Market Activity <span class="sig-hint">tx count &amp; traded volume vs. self-learned baseline</span></h3>
+    <div class="sig-act-wrap">
+      <div class="sig-act-badgecol">
+        <span class="sig-actbadge calibrating" id="sigActBadge">CALIBRATING</span>
+        <div class="sig-tag" id="sigActSub">learning baseline…</div>
+      </div>
+      <div class="sig-act-stats">
+        <div class="sig-act-stat">
+          <div class="sig-lbl">Transactions / sec</div>
+          <div class="mono" id="sigActTxNow">--</div>
+          <div class="sig-tag" id="sigActTxBase">baseline: --</div>
+        </div>
+        <div class="sig-act-stat">
+          <div class="sig-lbl">Volume / sec (BTC)</div>
+          <div class="mono" id="sigActVolNow">--</div>
+          <div class="sig-tag" id="sigActVolBase">baseline: --</div>
+        </div>
+      </div>
+    </div>
+    <div class="sig-tag" style="margin-top:8px;">Level is a live z-score of current tx-count &amp; BTC-volume flow against a mean &amp; spread the engine keeps updating on every tick (slow-decay running average) — so "normal" always means normal for this market's own recent history, not a fixed number. Feeds a confidence multiplier into calls: thin/very-low activity is discounted, high/very-high participation is trusted more, and aggressive spikes are pulled back in slightly to avoid chasing exhaustion moves.</div>
+  </div>
+
+  <div class="sig-panel">
+    <h3>Feature Weights <span class="sig-hint">self-tuned, gated by measured correlation</span></h3>
+    <div id="sigWeightsBox"></div>
+    <div class="sig-tag" style="display:flex;justify-content:space-between;margin-top:6px;"><span>Confidence gain</span><span id="sigConfGainVal" style="color:#ccc;">1.00</span></div>
+    <div class="sig-tag" style="display:flex;justify-content:space-between;"><span>Score threshold (flat band)</span><span id="sigScoreThreshVal" style="color:#ccc;">0.05</span></div>
+  </div>
+
+  <div class="sig-panel">
+    <h3>Pattern Memory <span class="sig-hint">regime detection &amp; recall</span></h3>
+    <div class="sig-regime-active">
+      <div>
+        <div class="sig-rname" id="sigActiveRegimeName">Regime #1 · baseline</div>
+        <div class="sig-rmeta" id="sigActiveRegimeMeta">0 samples · no history yet</div>
+      </div>
+      <span class="sig-regtag active">ACTIVE</span>
+    </div>
+    <div class="sig-tbl-wrap">
+      <table class="sig-table">
+        <thead><tr><th>Regime</th><th>Samples</th><th>Success</th><th>Last Seen</th><th></th></tr></thead>
+        <tbody id="sigRegimeTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="sig-panel">
+    <h3>Engine Settings</h3>
+    <div class="sig-settingsrow">
+      <div class="sig-sctrl">
+        <div class="sig-sk">Tolerance band (± %)</div>
+        <div class="sig-sv" id="sigTolVal">0.008%</div>
+        <input type="range" class="sig-range" id="sigTolSlider" min="1" max="200" value="8" step="1">
+      </div>
+      <div class="sig-sctrl">
+        <div class="sig-sk">Prediction horizon</div>
+        <div class="sig-sv" id="sigHorizonVal">30s</div>
+        <input type="range" class="sig-range" id="sigHorizonSlider" min="1" max="300" value="30" step="1">
+      </div>
+      <div class="sig-sctrl">
+        <div class="sig-sk">Rolling window (calls)</div>
+        <div class="sig-sv" id="sigRollVal">30</div>
+        <input type="range" class="sig-range" id="sigRollSlider" min="10" max="100" value="30" step="5">
+      </div>
+      <div class="sig-sctrl">
+        <div class="sig-sk">Learning rate</div>
+        <div class="sig-sv" id="sigLrVal">0.040</div>
+        <input type="range" class="sig-range" id="sigLrSlider" min="5" max="150" value="40" step="5">
+      </div>
+    </div>
+    <div class="sig-btnrow">
+      <button class="sig-btn primary" id="sigBtnToggle">Pause Engine</button>
+      <button class="sig-btn danger" id="sigBtnReset">Reset Memory</button>
+      <button class="sig-btn" id="sigBtnExport">Export Memory (JSON)</button>
+      <button class="sig-btn" id="sigBtnImport">⬆ Import Memory (JSON)</button>
+      <button class="sig-btn" id="sigBtnLinkFile">🔗 Link Data File (auto-save)</button>
+      <input type="file" id="sigImportInput" accept="application/json" style="display:none;">
+    </div>
+    <div class="sig-tag" id="sigImportStatus" style="margin-top:6px;"></div>
+    <div class="sig-tag" id="sigLinkStatus" style="margin-top:2px;"></div>
+  </div>
+
+  <div class="sig-panel">
+    <h3>Prediction History <span class="sig-hint">graded against actual price after horizon</span></h3>
+    <div class="sig-tbl-wrap">
+      <table class="sig-table">
+        <thead><tr><th>Time</th><th>Call</th><th>Conf</th><th>Activity</th><th>Actual Δ</th><th>Result</th></tr></thead>
+        <tbody id="sigPredTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="sig-panel">
+    <h3>Engine Log</h3>
+    <div class="sig-feed" id="sigFeed"></div>
+  </div>
+
+</div>
+
+<div style="max-width:720px;margin:0 auto 20px auto;text-align:center;">
+  <button id="exportJsonBtn" style="background:#1a1a1d;color:#fff;border:1px solid #444;border-radius:6px;padding:8px 14px;font-size:12px;cursor:pointer;margin-right:8px;">⬇ Download Full Log (JSON)</button>
+  <button id="exportCsvBtn" style="background:#1a1a1d;color:#fff;border:1px solid #444;border-radius:6px;padding:8px 14px;font-size:12px;cursor:pointer;margin-right:8px;">⬇ Download Full Log (CSV)</button>
+  <button id="importLogBtn" style="background:#1a1a1d;color:#fff;border:1px solid #444;border-radius:6px;padding:8px 14px;font-size:12px;cursor:pointer;">⬆ Import Log (JSON)</button>
+  <input type="file" id="importInput" accept="application/json" style="display:none;">
+  <div style="font-size:10px;color:#666;margin-top:8px;" id="autoExportLabel">lifetime log: starting…</div>
+</div>
+
+<script>
+  const priceEl = document.getElementById('price');
+  const sourceLabelEl = document.getElementById('sourceLabel');
+  const buyTpsEl = document.getElementById('buyTps');
+  const buyVolumeEl = document.getElementById('buyVolume');
+  const sellTpsEl = document.getElementById('sellTps');
+  const sellVolumeEl = document.getElementById('sellVolume');
+  const netPanelEl = document.getElementById('netPanel');
+  const netTitleEl = document.getElementById('netTitle');
+  const netTpsEl = document.getElementById('netTps');
+  const netVolumeEl = document.getElementById('netVolume');
+  const netPanel5sEl = document.getElementById('netPanel5s');
+  const netTitle5sEl = document.getElementById('netTitle5s');
+  const netTps5sEl = document.getElementById('netTps5s');
+  const netVolume5sEl = document.getElementById('netVolume5s');
+  const buyTps5sEl = document.getElementById('buyTps5s');
+  const buyVolume5sEl = document.getElementById('buyVolume5s');
+  const sellTps5sEl = document.getElementById('sellTps5s');
+  const sellVolume5sEl = document.getElementById('sellVolume5s');
+  const buyTps10sEl = document.getElementById('buyTps10s');
+  const buyVolume10sEl = document.getElementById('buyVolume10s');
+  const sellTps10sEl = document.getElementById('sellTps10s');
+  const sellVolume10sEl = document.getElementById('sellVolume10s');
+  const netPanel10sEl = document.getElementById('netPanel10s');
+  const netTitle10sEl = document.getElementById('netTitle10s');
+  const netTps10sEl = document.getElementById('netTps10s');
+  const netVolume10sEl = document.getElementById('netVolume10s');
+  const buyTps15sEl = document.getElementById('buyTps15s');
+  const buyVolume15sEl = document.getElementById('buyVolume15s');
+  const sellTps15sEl = document.getElementById('sellTps15s');
+  const sellVolume15sEl = document.getElementById('sellVolume15s');
+  const netPanel15sEl = document.getElementById('netPanel15s');
+  const netTitle15sEl = document.getElementById('netTitle15s');
+  const netTps15sEl = document.getElementById('netTps15s');
+  const netVolume15sEl = document.getElementById('netVolume15s');
+  const netPanel5sMirrorEl = document.getElementById('netPanel5sMirror');
+  const netTitle5sMirrorEl = document.getElementById('netTitle5sMirror');
+  const netTps5sMirrorEl = document.getElementById('netTps5sMirror');
+  const netVolume5sMirrorEl = document.getElementById('netVolume5sMirror');
+  const netPanel10sMirrorEl = document.getElementById('netPanel10sMirror');
+  const netTitle10sMirrorEl = document.getElementById('netTitle10sMirror');
+  const netTps10sMirrorEl = document.getElementById('netTps10sMirror');
+  const netVolume10sMirrorEl = document.getElementById('netVolume10sMirror');
+  const netPanel15sMirrorEl = document.getElementById('netPanel15sMirror');
+  const netTitle15sMirrorEl = document.getElementById('netTitle15sMirror');
+  const netTps15sMirrorEl = document.getElementById('netTps15sMirror');
+  const netVolume15sMirrorEl = document.getElementById('netVolume15sMirror');
+  const buyTps30sEl = document.getElementById('buyTps30s');
+  const buyVolume30sEl = document.getElementById('buyVolume30s');
+  const sellTps30sEl = document.getElementById('sellTps30s');
+  const sellVolume30sEl = document.getElementById('sellVolume30s');
+  const netPanel30sEl = document.getElementById('netPanel30s');
+  const netTitle30sEl = document.getElementById('netTitle30s');
+  const netTps30sEl = document.getElementById('netTps30s');
+  const netVolume30sEl = document.getElementById('netVolume30s');
+  const hourNetVolumeEl = document.getElementById('hourNetVolume');
+  const hourBuyVolumeEl = document.getElementById('hourBuyVolume');
+  const hourSellVolumeEl = document.getElementById('hourSellVolume');
+  const hourResetLabelEl = document.getElementById('hourResetLabel');
+  const hourTrendLabelEl = document.getElementById('hourTrendLabel');
+  const logStatusLabelEl = document.getElementById('logStatusLabel');
+  const exportJsonBtn = document.getElementById('exportJsonBtn');
+  const exportCsvBtn = document.getElementById('exportCsvBtn');
+  const importLogBtn = document.getElementById('importLogBtn');
+  const importInput = document.getElementById('importInput');
+  const autoExportLabelEl = document.getElementById('autoExportLabel');
+  let lastPrice = null;
+
+  const maxWindowMs = 3600000; // 1 hour, used for pruning minute buckets
+
+  // Rolling 1-second trade buffer, used to compute BUY/SELL TPS + volume.
+  // Binance's "m" flag = true means the buyer was the maker, i.e. the
+  // taker (aggressor) was a seller -> classify as SELL. m = false means
+  // the taker was a buyer -> classify as BUY.
+  const tradeBuffer = []; // { t: timestamp(ms), side: 'buy'|'sell', qty: number }
+
+  // True trailing 1-hour net BUY/SELL volume, kept as per-minute buckets:
+  // { buyVol, sellVol } keyed by minute epoch (Math.floor(t/60000)).
+  // Seeded on load from Binance's 1m klines (taker-buy volume field) so
+  // the hour is populated immediately instead of starting at zero, then
+  // kept rolling forward by folding in live trades and dropping buckets
+  // older than 60 minutes.
+  const minuteBuckets = new Map();
+  let hourDataReady = false;
+  let lastHourSnapshot = null;
+
+  // Lifetime record of buy/sell numbers, kept as one continuously
+  // growing log rather than a series of separate periodic files.
+  // Persisted to localStorage so it survives reloads/reopens of this
+  // page (works when the file is opened directly in a browser; note
+  // below on the Claude.ai artifact sandbox). JSON/CSV export always
+  // dumps the FULL lifetime log, not just the current session, and
+  // "Import Log" lets you merge in a previously downloaded JSON file
+  // — e.g. to carry the log across browsers/machines or restore it
+  // after clearing site data.
+  const LIFETIME_KEY = 'btcFlowLifetimeLog';
+  let flowLog = [];
+  let storageAvailable = true;
+
+  function loadLifetimeLog() {
+    try {
+      const raw = localStorage.getItem(LIFETIME_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) flowLog = parsed;
+      }
+    } catch (err) {
+      // localStorage unavailable (e.g. sandboxed artifact preview) —
+      // the log still works for this session, it just won't survive
+      // a reload. Download the file periodically to keep history.
+      storageAvailable = false;
+    }
+    updateLogStatus();
+  }
+  loadLifetimeLog();
+
+  function saveLifetimeLog() {
+    if (!storageAvailable) return;
+    try {
+      localStorage.setItem(LIFETIME_KEY, JSON.stringify(flowLog));
+    } catch (err) {
+      // Likely quota exceeded on a very long-running log. Keep
+      // collecting in memory; just flag it so the user knows to
+      // download and can clear old data if they want to keep going.
+      storageAvailable = false;
+      updateLogStatus('local storage full — still logging in memory, download to save it');
+    }
+  }
+
+  function updateLogStatus(note) {
+    const base = `lifetime log: ${flowLog.length} snapshot${flowLog.length === 1 ? '' : 's'}`;
+    autoExportLabelEl.textContent = note ? `${base} — ${note}` : `${base} (auto-saved locally)`;
+  }
+
+  function takeSnapshot() {
+    const snap = {
+      t: Date.now(),
+      iso: new Date().toISOString(),
+      price: lastPrice,
+      buyVol1s: parseFloat(buyVolumeEl.textContent) || 0,
+      sellVol1s: parseFloat(sellVolumeEl.textContent) || 0,
+      hourBuyVol: lastHourSnapshot ? lastHourSnapshot.hourBuyVol : null,
+      hourSellVol: lastHourSnapshot ? lastHourSnapshot.hourSellVol : null,
+      hourNetVol: lastHourSnapshot ? lastHourSnapshot.hourNetVol : null
+    };
+    flowLog.push(snap);
+    saveLifetimeLog();
+    updateLogStatus();
+    logStatusLabelEl.textContent = `log: ${flowLog.length} lifetime snapshots`;
+  }
+  // Take a snapshot roughly once a minute — enough resolution to see
+  // the trend without recording on every single trade tick.
+  setInterval(takeSnapshot, 60000);
+
+  function downloadBlob(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function timestampForFilename(d) {
+    return d.toISOString().replace(/[:.]/g, '-');
+  }
+
+  function exportJson() {
+    const stamp = timestampForFilename(new Date());
+    downloadBlob(
+      JSON.stringify(flowLog, null, 2),
+      `btc-flow-lifetime-log-${stamp}.json`,
+      'application/json'
+    );
+  }
+
+  function exportCsv() {
+    const headers = ['t', 'iso', 'price', 'buyVol1s', 'sellVol1s', 'hourBuyVol', 'hourSellVol', 'hourNetVol'];
+    const rows = flowLog.map(s => headers.map(h => s[h] === null || s[h] === undefined ? '' : s[h]).join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    const stamp = timestampForFilename(new Date());
+    downloadBlob(csv, `btc-flow-lifetime-log-${stamp}.csv`, 'text/csv');
+  }
+
+  exportJsonBtn.addEventListener('click', exportJson);
+  exportCsvBtn.addEventListener('click', exportCsv);
+
+  // Merge an externally-held JSON export back into the lifetime log,
+  // deduping on timestamp so re-importing the same file twice is safe.
+  importLogBtn.addEventListener('click', () => importInput.click());
+  importInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const imported = JSON.parse(reader.result);
+        if (!Array.isArray(imported)) throw new Error('not an array');
+        const existingTimes = new Set(flowLog.map(s => s.t));
+        let added = 0;
+        for (const snap of imported) {
+          if (snap && typeof snap.t === 'number' && !existingTimes.has(snap.t)) {
+            flowLog.push(snap);
+            existingTimes.add(snap.t);
+            added++;
+          }
+        }
+        flowLog.sort((a, b) => a.t - b.t);
+        saveLifetimeLog();
+        updateLogStatus(`imported ${added} new snapshot${added === 1 ? '' : 's'}`);
+      } catch (err) {
+        updateLogStatus('import failed — not a valid log file');
+      }
+    };
+    reader.readAsText(file);
+    importInput.value = '';
+  });
+
+  function minuteKey(t) { return Math.floor(t / 60000); }
+
+  function addToBucket(t, side, qty) {
+    const key = minuteKey(t);
+    let bucket = minuteBuckets.get(key);
+    if (!bucket) {
+      bucket = { buyVol: 0, sellVol: 0 };
+      minuteBuckets.set(key, bucket);
+    }
+    if (side === 'buy') bucket.buyVol += qty; else bucket.sellVol += qty;
+  }
+
+  function pruneBuckets(now) {
+    const cutoffKey = minuteKey(now - maxWindowMs);
+    for (const key of minuteBuckets.keys()) {
+      if (key < cutoffKey) minuteBuckets.delete(key);
+    }
+  }
+
+  function sumBuckets() {
+    let buyVol = 0, sellVol = 0;
+    for (const bucket of minuteBuckets.values()) {
+      buyVol += bucket.buyVol;
+      sellVol += bucket.sellVol;
+    }
+    return { buyVol, sellVol };
+  }
+
+  // Backfill the last 60 minutes from Binance's public klines endpoint.
+  // NOTE: the WebSocket below connects immediately and can start writing
+  // live trades into the *current* minute's bucket before this fetch
+  // resolves. To avoid that race clobbering live data, we only seed
+  // completed minutes here and deliberately skip the still-forming
+  // current minute — it fills naturally from the live stream instead.
+  async function backfillHourFromKlines() {
+    try {
+      const res = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=60');
+      const klines = await res.json();
+      const currentMinute = minuteKey(Date.now());
+      klines.forEach(k => {
+        const openTime = k[0];
+        const key = minuteKey(openTime);
+        if (key >= currentMinute) return; // skip in-progress minute
+        const volume = parseFloat(k[5]);
+        const takerBuyVol = parseFloat(k[9]);
+        const sellVol = Math.max(0, volume - takerBuyVol);
+        minuteBuckets.set(key, { buyVol: takerBuyVol, sellVol: sellVol });
+      });
+      hourDataReady = true;
+      hourResetLabelEl.textContent = 'trailing 60 min (live)';
+    } catch (err) {
+      hourResetLabelEl.textContent = 'backfill unavailable — building live only';
+      hourDataReady = true;
+    }
+  }
+  backfillHourFromKlines();
+
+  // Live trade feed with failover between two independent, trusted
+  // exchanges: Binance (primary) and Coinbase Exchange (fallback).
+  // If a source repeatedly fails to even establish a connection, we
+  // switch to the other one; if a source drops after having connected
+  // fine (a normal blip), we just retry that same source with backoff
+  // rather than switching, since the exchange itself was working.
+  //
+  // Coinbase quotes BTC in USD, not USDT, so its trade prices are
+  // auto-converted to USDT-equivalent using a live USD->USDT rate
+  // (from Coinbase's own USDT-USD pair) polled every 30s, keeping the
+  // displayed price consistent with Binance's BTC/USDT quote whichever
+  // source is active.
+  let usdtUsdRate = 1; // USD per 1 USDT; updated by updateUsdtRate()
+
+  async function updateUsdtRate() {
+    try {
+      const res = await fetch('https://api.exchange.coinbase.com/products/USDT-USD/ticker');
+      const data = await res.json();
+      const rate = parseFloat(data.price);
+      if (rate > 0) usdtUsdRate = rate;
+    } catch (err) {
+      // Keep the last known (or default 1:1) rate on failure
+    }
+  }
+  updateUsdtRate();
+  setInterval(updateUsdtRate, 30000);
+
+  const SOURCES = {
+    binance: {
+      label: 'Binance (BTC/USDT)',
+      url: 'wss://stream.binance.com:9443/ws/btcusdt@trade',
+      onOpen: null,
+      parse: (raw) => {
+        const data = JSON.parse(raw);
+        if (!data.p || !data.q) return null;
+        return {
+          price: parseFloat(data.p),
+          qty: parseFloat(data.q),
+          // "m" = buyer is maker -> taker (aggressor) sold -> SELL.
+          side: data.m ? 'sell' : 'buy'
+        };
+      }
+    },
+    coinbase: {
+      label: 'Coinbase (BTC/USD→USDT) — fallback',
+      url: 'wss://ws-feed.exchange.coinbase.com',
+      onOpen: (socket) => {
+        socket.send(JSON.stringify({
+          type: 'subscribe',
+          channels: [{ name: 'matches', product_ids: ['BTC-USD'] }]
+        }));
+      },
+      parse: (raw) => {
+        const data = JSON.parse(raw);
+        if (data.type !== 'match' && data.type !== 'last_match') return null;
+        if (!data.price || !data.size) return null;
+        return {
+          // Convert USD -> USDT: usdtUsdRate is USD per 1 USDT, so
+          // dividing USD price by it gives the USDT-equivalent price.
+          price: parseFloat(data.price) / usdtUsdRate,
+          qty: parseFloat(data.size),
+          // Coinbase's "side" is the MAKER's side, so flip it to get the
+          // taker (aggressor) side, matching Binance's convention above.
+          side: data.side === 'sell' ? 'buy' : 'sell'
+        };
+      }
+    }
+  };
+
+  let activeSource = 'binance';
+  let ws = null;
+  let hadOpened = false;
+  let failStreak = 0;
+  let reconnectDelay = 1000;
+  const maxReconnectDelay = 30000;
+  let reconnectTimer = null;
+
+  function handleTrade(price, qty, side) {
+    const now = Date.now();
+
+    // Update price display with color based on movement
+    priceEl.textContent = '$' + price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    if (lastPrice !== null) {
+      priceEl.className = price >= lastPrice ? 'up' : 'down';
+    }
+    lastPrice = price;
+
+    // Track trade side + quantity for the BUY/SELL panels
+    tradeBuffer.push({ t: now, side, qty });
+
+    // Also fold into the trailing-hour minute buckets
+    addToBucket(now, side, qty);
+
+    refreshFlowPanels();
+  }
+
+  function connectWebSocket() {
+    const source = SOURCES[activeSource];
+    sourceLabelEl.textContent = `Connecting to ${source.label}…`;
+    hadOpened = false;
+    ws = new WebSocket(source.url);
+
+    ws.onopen = () => {
+      hadOpened = true;
+      failStreak = 0;
+      reconnectDelay = 1000; // reset backoff after a successful connection
+      sourceLabelEl.textContent = `Source: ${source.label}`;
+      if (source.onOpen) source.onOpen(ws);
+    };
+
+    ws.onmessage = (event) => {
+      const trade = source.parse(event.data);
+      if (trade) handleTrade(trade.price, trade.qty, trade.side);
+    };
+
+    ws.onerror = () => {
+      priceEl.textContent = 'Connection error — reconnecting…';
+    };
+
+    ws.onclose = () => {
+      if (reconnectTimer) return; // a reconnect is already scheduled
+
+      // Only switch sources if this attempt never even opened a
+      // connection, and only after two such failures in a row — a
+      // single hiccup isn't grounds for failover.
+      if (!hadOpened) {
+        failStreak++;
+        if (failStreak >= 2) {
+          activeSource = activeSource === 'binance' ? 'coinbase' : 'binance';
+          failStreak = 0;
+          reconnectDelay = 1000;
+        }
+      }
+
+      priceEl.textContent = 'Disconnected — reconnecting…';
+      sourceLabelEl.textContent = `Reconnecting (${SOURCES[activeSource].label})…`;
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connectWebSocket();
+      }, reconnectDelay);
+      reconnectDelay = Math.min(reconnectDelay * 2, maxReconnectDelay);
+    };
+  }
+
+  connectWebSocket();
+
+  function refreshFlowPanels() {
+    const now = Date.now();
+
+    pruneBuckets(now);
+
+    const cutoff1s = now - 1000;
+    const cutoff5s = now - 5000;
+    const cutoff10s = now - 10000;
+    const cutoff15s = now - 15000;
+    const cutoff30s = now - 30000;
+    // Keep the buffer trimmed to the widest window we display (30s);
+    // the narrower windows are then just filtered subsets of it.
+    while (tradeBuffer.length && tradeBuffer[0].t < cutoff30s) {
+      tradeBuffer.shift();
+    }
+
+    let buyCount = 0, sellCount = 0, buyVol = 0, sellVol = 0;
+    let buyCount5s = 0, sellCount5s = 0, buyVol5s = 0, sellVol5s = 0;
+    let buyCount10s = 0, sellCount10s = 0, buyVol10s = 0, sellVol10s = 0;
+    let buyCount15s = 0, sellCount15s = 0, buyVol15s = 0, sellVol15s = 0;
+    let buyCount30s = 0, sellCount30s = 0, buyVol30s = 0, sellVol30s = 0;
+    for (const tr of tradeBuffer) {
+      if (tr.side === 'buy') { buyCount30s++; buyVol30s += tr.qty; }
+      else { sellCount30s++; sellVol30s += tr.qty; }
+      if (tr.t >= cutoff15s) {
+        if (tr.side === 'buy') { buyCount15s++; buyVol15s += tr.qty; }
+        else { sellCount15s++; sellVol15s += tr.qty; }
+      }
+      if (tr.t >= cutoff10s) {
+        if (tr.side === 'buy') { buyCount10s++; buyVol10s += tr.qty; }
+        else { sellCount10s++; sellVol10s += tr.qty; }
+      }
+      if (tr.t >= cutoff5s) {
+        if (tr.side === 'buy') { buyCount5s++; buyVol5s += tr.qty; }
+        else { sellCount5s++; sellVol5s += tr.qty; }
+      }
+      if (tr.t >= cutoff1s) {
+        if (tr.side === 'buy') { buyCount++; buyVol += tr.qty; }
+        else { sellCount++; sellVol += tr.qty; }
+      }
+    }
+
+    buyTpsEl.textContent = buyCount;
+    sellTpsEl.textContent = sellCount;
+    buyVolumeEl.textContent = buyVol.toFixed(5);
+    sellVolumeEl.textContent = sellVol.toFixed(5);
+
+    buyTps5sEl.textContent = buyCount5s;
+    sellTps5sEl.textContent = sellCount5s;
+    buyVolume5sEl.textContent = buyVol5s.toFixed(5);
+    sellVolume5sEl.textContent = sellVol5s.toFixed(5);
+
+    buyTps10sEl.textContent = buyCount10s;
+    sellTps10sEl.textContent = sellCount10s;
+    buyVolume10sEl.textContent = buyVol10s.toFixed(5);
+    sellVolume10sEl.textContent = sellVol10s.toFixed(5);
+
+    buyTps15sEl.textContent = buyCount15s;
+    sellTps15sEl.textContent = sellCount15s;
+    buyVolume15sEl.textContent = buyVol15s.toFixed(5);
+    sellVolume15sEl.textContent = sellVol15s.toFixed(5);
+
+    buyTps30sEl.textContent = buyCount30s;
+    sellTps30sEl.textContent = sellCount30s;
+    buyVolume30sEl.textContent = buyVol30s.toFixed(5);
+    sellVolume30sEl.textContent = sellVol30s.toFixed(5);
+
+    // Net dominance is decided by VOLUME (which side moved more BTC), but
+    // the TPS shown is the combined NET transaction count — the difference
+    // between buy-side and sell-side trade counts — displayed under
+    // whichever side volume says is dominant.
+    const netVol = buyVol - sellVol;
+    const netTx = Math.abs(buyCount - sellCount);
+    netPanelEl.classList.remove('dom-buy', 'dom-sell', 'dom-flat');
+    if (netVol > 0) {
+      netPanelEl.classList.add('dom-buy');
+      netTitleEl.textContent = 'NET BUY';
+    } else if (netVol < 0) {
+      netPanelEl.classList.add('dom-sell');
+      netTitleEl.textContent = 'NET SELL';
+    } else {
+      netPanelEl.classList.add('dom-flat');
+      netTitleEl.textContent = 'FLAT';
+    }
+    netTpsEl.textContent = netTx;
+    netVolumeEl.textContent = Math.abs(netVol).toFixed(5);
+
+    // Same dominance logic as the 1s NET panel above, just applied to
+    // the wider 5-second accumulation window.
+    const netVol5s = buyVol5s - sellVol5s;
+    const netTx5s = Math.abs(buyCount5s - sellCount5s);
+    netPanel5sEl.classList.remove('dom-buy', 'dom-sell', 'dom-flat');
+    if (netVol5s > 0) {
+      netPanel5sEl.classList.add('dom-buy');
+      netTitle5sEl.textContent = 'NET BUY (5S)';
+    } else if (netVol5s < 0) {
+      netPanel5sEl.classList.add('dom-sell');
+      netTitle5sEl.textContent = 'NET SELL (5S)';
+    } else {
+      netPanel5sEl.classList.add('dom-flat');
+      netTitle5sEl.textContent = 'FLAT (5S)';
+    }
+    netTps5sEl.textContent = netTx5s;
+    netVolume5sEl.textContent = Math.abs(netVol5s).toFixed(5);
+
+    // Full mirror of the 5S NET panel, shown next to the Predicted
+    // Direction / Success Rate / Confidence Rate row up top.
+    netPanel5sMirrorEl.classList.remove('dom-buy', 'dom-sell', 'dom-flat');
+    if (netVol5s > 0) {
+      netPanel5sMirrorEl.classList.add('dom-buy');
+      netTitle5sMirrorEl.textContent = 'NET BUY (5S)';
+    } else if (netVol5s < 0) {
+      netPanel5sMirrorEl.classList.add('dom-sell');
+      netTitle5sMirrorEl.textContent = 'NET SELL (5S)';
+    } else {
+      netPanel5sMirrorEl.classList.add('dom-flat');
+      netTitle5sMirrorEl.textContent = 'FLAT (5S)';
+    }
+    netTps5sMirrorEl.textContent = netTx5s;
+    netVolume5sMirrorEl.textContent = Math.abs(netVol5s).toFixed(5);
+
+    // Same dominance logic again, for the 10-second window.
+    const netVol10s = buyVol10s - sellVol10s;
+    const netTx10s = Math.abs(buyCount10s - sellCount10s);
+    netPanel10sEl.classList.remove('dom-buy', 'dom-sell', 'dom-flat');
+    if (netVol10s > 0) {
+      netPanel10sEl.classList.add('dom-buy');
+      netTitle10sEl.textContent = 'NET BUY (10S)';
+    } else if (netVol10s < 0) {
+      netPanel10sEl.classList.add('dom-sell');
+      netTitle10sEl.textContent = 'NET SELL (10S)';
+    } else {
+      netPanel10sEl.classList.add('dom-flat');
+      netTitle10sEl.textContent = 'FLAT (10S)';
+    }
+    netTps10sEl.textContent = netTx10s;
+    netVolume10sEl.textContent = Math.abs(netVol10s).toFixed(5);
+
+    // Full mirror of the 10S NET panel, shown next to the Predicted
+    // Direction / Success Rate / Confidence Rate row up top.
+    netPanel10sMirrorEl.classList.remove('dom-buy', 'dom-sell', 'dom-flat');
+    if (netVol10s > 0) {
+      netPanel10sMirrorEl.classList.add('dom-buy');
+      netTitle10sMirrorEl.textContent = 'NET BUY (10S)';
+    } else if (netVol10s < 0) {
+      netPanel10sMirrorEl.classList.add('dom-sell');
+      netTitle10sMirrorEl.textContent = 'NET SELL (10S)';
+    } else {
+      netPanel10sMirrorEl.classList.add('dom-flat');
+      netTitle10sMirrorEl.textContent = 'FLAT (10S)';
+    }
+    netTps10sMirrorEl.textContent = netTx10s;
+    netVolume10sMirrorEl.textContent = Math.abs(netVol10s).toFixed(5);
+
+    // Same dominance logic again, for the 15-second window.
+    const netVol15s = buyVol15s - sellVol15s;
+    const netTx15s = Math.abs(buyCount15s - sellCount15s);
+    netPanel15sEl.classList.remove('dom-buy', 'dom-sell', 'dom-flat');
+    if (netVol15s > 0) {
+      netPanel15sEl.classList.add('dom-buy');
+      netTitle15sEl.textContent = 'NET BUY (15S)';
+    } else if (netVol15s < 0) {
+      netPanel15sEl.classList.add('dom-sell');
+      netTitle15sEl.textContent = 'NET SELL (15S)';
+    } else {
+      netPanel15sEl.classList.add('dom-flat');
+      netTitle15sEl.textContent = 'FLAT (15S)';
+    }
+    netTps15sEl.textContent = netTx15s;
+    netVolume15sEl.textContent = Math.abs(netVol15s).toFixed(5);
+
+    // Full mirror of the 15S NET panel, shown next to the Predicted
+    // Direction / Success Rate / Confidence Rate row up top.
+    netPanel15sMirrorEl.classList.remove('dom-buy', 'dom-sell', 'dom-flat');
+    if (netVol15s > 0) {
+      netPanel15sMirrorEl.classList.add('dom-buy');
+      netTitle15sMirrorEl.textContent = 'NET BUY (15S)';
+    } else if (netVol15s < 0) {
+      netPanel15sMirrorEl.classList.add('dom-sell');
+      netTitle15sMirrorEl.textContent = 'NET SELL (15S)';
+    } else {
+      netPanel15sMirrorEl.classList.add('dom-flat');
+      netTitle15sMirrorEl.textContent = 'FLAT (15S)';
+    }
+    netTps15sMirrorEl.textContent = netTx15s;
+    netVolume15sMirrorEl.textContent = Math.abs(netVol15s).toFixed(5);
+
+    // Same dominance logic again, for the 30-second window.
+    const netVol30s = buyVol30s - sellVol30s;
+    const netTx30s = Math.abs(buyCount30s - sellCount30s);
+    netPanel30sEl.classList.remove('dom-buy', 'dom-sell', 'dom-flat');
+    if (netVol30s > 0) {
+      netPanel30sEl.classList.add('dom-buy');
+      netTitle30sEl.textContent = 'NET BUY (30S)';
+    } else if (netVol30s < 0) {
+      netPanel30sEl.classList.add('dom-sell');
+      netTitle30sEl.textContent = 'NET SELL (30S)';
+    } else {
+      netPanel30sEl.classList.add('dom-flat');
+      netTitle30sEl.textContent = 'FLAT (30S)';
+    }
+    netTps30sEl.textContent = netTx30s;
+    netVolume30sEl.textContent = Math.abs(netVol30s).toFixed(5);
+
+    // Cumulative BUY / SELL / net volume across the true trailing 60 minutes
+    if (hourDataReady) {
+      const { buyVol: hourBuyVol, sellVol: hourSellVol } = sumBuckets();
+      const hourNetVol = hourBuyVol - hourSellVol;
+      hourBuyVolumeEl.textContent = hourBuyVol.toFixed(5);
+      hourSellVolumeEl.textContent = hourSellVol.toFixed(5);
+      hourNetVolumeEl.textContent =
+        (hourNetVol >= 0 ? '+' : '-') + Math.abs(hourNetVol).toFixed(5);
+      hourNetVolumeEl.style.color = hourNetVol > 0 ? '#22a26b'
+        : hourNetVol < 0 ? '#e14f47'
+        : '#fff';
+
+      // Which side is favored over the accumulating trailing hour so far.
+      // Uses the same buyVol vs sellVol comparison as the live net panel,
+      // just applied to the 1H rolling totals instead of the 1s window.
+      if (hourNetVol > 0) {
+        hourTrendLabelEl.textContent = '1H FAVORS BUY';
+        hourTrendLabelEl.style.color = '#22a26b';
+      } else if (hourNetVol < 0) {
+        hourTrendLabelEl.textContent = '1H FAVORS SELL';
+        hourTrendLabelEl.style.color = '#e14f47';
+      } else {
+        hourTrendLabelEl.textContent = '1H FLAT';
+        hourTrendLabelEl.style.color = '#aaa';
+      }
+
+      lastHourSnapshot = { hourBuyVol, hourSellVol, hourNetVol };
+    }
+  }
+
+  // Keep panels ticking down even if no new trades arrive momentarily
+  setInterval(refreshFlowPanels, 250);
+</script>
+
+<script>
+(function () {
+  // Polymarket "BTC Up or Down — 5 minute" widget.
+  //
+  // Architecture mirrors a working reference implementation (a live
+  // trading-bot simulator built against this same market), fixing an
+  // earlier mistake in this file: REST market objects were being blended
+  // with a synthetic bestBid/bestAsk midpoint that doesn't reliably map
+  // to a specific outcome. The reference never does that — it uses
+  // outcomePrices directly for REST, and only averages best_bid/best_ask
+  // when those fields arrive in a CLOB *websocket* message, which is a
+  // different, per-token field. Source chain, each link used only if the
+  // one before it fails:
+  //   1. CLOB WebSocket (live)             — wss://ws-subscriptions-clob.polymarket.com/ws/market
+  //   2. Gamma REST polling, direct        — https://gamma-api.polymarket.com
+  //   3. Gamma REST polling, via CORS proxy
+  // The countdown itself is decoupled from all of this: it's pure math
+  // (Math.floor(now/300)*300), so it never depends on a fetch succeeding.
+
+  const timerEl = document.getElementById('poly5mTimer');
+  const upBtn = document.getElementById('poly5mUpBtn');
+  const downBtn = document.getElementById('poly5mDownBtn');
+  const upPctEl = document.getElementById('poly5mUpPct');
+  const downPctEl = document.getElementById('poly5mDownPct');
+  const upMultEl = document.getElementById('poly5mUpMult');
+  const downMultEl = document.getElementById('poly5mDownMult');
+  const tradesEl = document.getElementById('poly5mTrades');
+  const statusEl = document.getElementById('poly5mStatus');
+  const historyEl = document.getElementById('poly5mHistory');
+
+  const WINDOW_SECONDS = 300; // 5 minutes, aligned to the UTC epoch grid
+  const MAX_HISTORY = 8; // how many completed cycles to keep in the list
+  const CORS_PROXIES = [
+    '',                                     // direct, no proxy — tried first every time
+    'https://corsproxy.io/?url=',
+    'https://api.allorigins.win/raw?url='
+  ];
+  let corsProxyIdx = 0; // remembers which proxy last worked, so a dead one isn't retried every poll
+
+  let currentWindowStart = null;
+  let marketSlug = null;
+  let marketUrl = null;
+  let upTokenId = null, downTokenId = null, conditionId = null;
+  let realUpPrice = null;
+  let ws = null, wsWatchdog = null, gammaPollTimer = null, tradesPollTimer = null;
+  let lastTradeCount = null;   // running count for the cycle currently in progress
+  let cycleHistory = [];       // [{ windowStart, count, final }], most recent first
+
+  function windowStartFor(nowSec) {
+    return Math.floor(nowSec / WINDOW_SECONDS) * WINDOW_SECONDS;
+  }
+
+  // Decoupled countdown — computed from the clock alone, ticking every
+  // second regardless of whether any fetch below has ever succeeded.
+  function tickCountdown() {
+    const nowSec = Date.now() / 1000;
+    const start = windowStartFor(nowSec);
+    const remaining = Math.max(0, (start + WINDOW_SECONDS) - nowSec);
+    const m = Math.floor(remaining / 60);
+    const s = Math.floor(remaining % 60);
+    timerEl.textContent = `${m}:${String(s).padStart(2, '0')}`;
+
+    if (start !== currentWindowStart) {
+      currentWindowStart = start;
+      startNewCycle(start);
+    }
+  }
+  setInterval(tickCountdown, 1000);
+  tickCountdown();
+
+  // Walks the proxy list starting from whichever entry last worked.
+  async function bridgedFetch(url) {
+    let lastErr = null;
+    for (let i = 0; i < CORS_PROXIES.length; i++) {
+      const idx = (corsProxyIdx + i) % CORS_PROXIES.length;
+      const prefix = CORS_PROXIES[idx];
+      try {
+        const res = await fetch(prefix ? (prefix + encodeURIComponent(url)) : url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('http ' + res.status);
+        corsProxyIdx = idx;
+        return await res.json();
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error('all sources unreachable');
+  }
+
+  // Gamma API returns several fields (outcomes, outcomePrices,
+  // clobTokenIds) as JSON-encoded strings rather than actual arrays.
+  function parseMaybeJsonArray(v) {
+    if (Array.isArray(v)) return v;
+    if (typeof v === 'string') {
+      try { return JSON.parse(v); } catch (e) { return []; }
+    }
+    return [];
+  }
+
+  // Resolve which Polymarket market is live right now and fetch the
+  // clobTokenIds (one per outcome) + conditionId needed for the CLOB
+  // WebSocket subscription and the trades lookup.
+  async function resolveActiveMarket(slug) {
+    try {
+      const data = await bridgedFetch(`https://gamma-api.polymarket.com/markets?slug=${slug}`);
+      const m = Array.isArray(data) ? data[0] : data;
+      if (!m || !m.clobTokenIds) return false;
+
+      const tokenIds = parseMaybeJsonArray(m.clobTokenIds);
+      const outcomesRaw = m.outcomes && m.outcomes.length ? m.outcomes : '["Up","Down"]';
+      const outcomes = parseMaybeJsonArray(outcomesRaw);
+      const upIdx = outcomes.findIndex(o => /up/i.test(o));
+      const downIdx = outcomes.findIndex(o => /down/i.test(o));
+
+      upTokenId = tokenIds[upIdx >= 0 ? upIdx : 0];
+      downTokenId = tokenIds[downIdx >= 0 ? downIdx : 1];
+      conditionId = m.conditionId || m.condition_id || null;
+      marketSlug = slug;
+      marketUrl = `https://polymarket.com/event/${slug}`;
+
+      // Seed immediately from outcomePrices so something real shows before
+      // the websocket or the REST poll produces its first tick.
+      if (m.outcomePrices) {
+        const prices = parseMaybeJsonArray(m.outcomePrices).map(Number);
+        const p = prices[upIdx >= 0 ? upIdx : 0];
+        if (typeof p === 'number' && !isNaN(p)) applyRealUpPrice(p);
+      }
+      return true;
+    } catch (e) {
+      console.warn('[poly5m] resolveActiveMarket failed', e);
+      return false;
+    }
+  }
+
+  // Single P(UP) value drives both buttons — keeps UP/DOWN always exactly
+  // complementary instead of two independently-fetched numbers that could
+  // drift apart or briefly disagree.
+  function renderUpDownFromProb(probUp) {
+    const probDown = 1 - probUp;
+    const upMulti = Math.min(50, 1 / probUp);
+    const downMulti = Math.min(50, 1 / probDown);
+    upPctEl.textContent = (probUp * 100).toFixed(1) + '%';
+    downPctEl.textContent = (probDown * 100).toFixed(1) + '%';
+    upMultEl.textContent = upMulti.toFixed(2);
+    downMultEl.textContent = downMulti.toFixed(2);
+  }
+
+  function applyRealUpPrice(p) {
+    if (typeof p !== 'number' || isNaN(p)) return;
+    realUpPrice = Math.max(0.01, Math.min(0.99, p));
+    renderUpDownFromProb(realUpPrice);
+    console.debug('[poly5m] price update', { slug: marketSlug, upPrice: realUpPrice });
+  }
+
+  function teardownSources() {
+    if (ws) { try { ws.onclose = null; ws.onerror = null; ws.close(); } catch (e) {} ws = null; }
+    clearTimeout(wsWatchdog); wsWatchdog = null;
+    clearInterval(gammaPollTimer); gammaPollTimer = null;
+    clearInterval(tradesPollTimer); tradesPollTimer = null;
+  }
+
+  function connectClobWs() {
+    if (!upTokenId || !downTokenId) return;
+    try {
+      ws = new WebSocket('wss://ws-subscriptions-clob.polymarket.com/ws/market');
+      ws.onopen = () => {
+        try { ws.send(JSON.stringify({ assets_ids: [upTokenId, downTokenId], type: 'market' })); } catch (e) {}
+        // If no real price lands shortly after connecting, the exact
+        // subscription/message schema may not match what's assumed here
+        // (Polymarket doesn't document a stable public schema) — drop to
+        // REST instead of sitting on a silently-empty socket all cycle.
+        clearTimeout(wsWatchdog);
+        wsWatchdog = setTimeout(() => { if (realUpPrice === null) startGammaRestPolling(); }, 8000);
+        statusEl.textContent = 'live (order book)';
+      };
+      ws.onmessage = (ev) => {
+        try {
+          const d = JSON.parse(ev.data);
+          const msgs = Array.isArray(d) ? d : [d];
+          msgs.forEach(m => {
+            const assetId = m.asset_id || m.market || m.token_id;
+            let px = null;
+            if (m.price != null) px = parseFloat(m.price);
+            else if (m.best_bid != null && m.best_ask != null) px = (parseFloat(m.best_bid) + parseFloat(m.best_ask)) / 2;
+            else if (m.last_trade_price != null) px = parseFloat(m.last_trade_price);
+            if (px == null || isNaN(px)) return;
+            if (assetId === upTokenId) { clearTimeout(wsWatchdog); statusEl.textContent = 'live (order book)'; applyRealUpPrice(px); }
+            else if (assetId === downTokenId) { clearTimeout(wsWatchdog); statusEl.textContent = 'live (order book)'; applyRealUpPrice(1 - px); }
+          });
+        } catch (e) {}
+      };
+      ws.onerror = () => { startGammaRestPolling(); };
+      ws.onclose = () => { startGammaRestPolling(); };
+    } catch (e) {
+      startGammaRestPolling();
+    }
+  }
+
+  // ---------- Fallback: Gamma REST polling (direct, then via proxy bridge) ----------
+  function startGammaRestPolling() {
+    if (gammaPollTimer) return;
+    if (ws) { try { ws.onclose = null; ws.onerror = null; ws.close(); } catch (e) {} ws = null; }
+    statusEl.textContent = 'live (REST)';
+    gammaPollTimer = setInterval(async () => {
+      if (!marketSlug) return;
+      try {
+        const data = await bridgedFetch(`https://gamma-api.polymarket.com/markets?slug=${marketSlug}`);
+        const m = Array.isArray(data) ? data[0] : data;
+        if (m && m.outcomePrices) {
+          const prices = parseMaybeJsonArray(m.outcomePrices).map(Number);
+          const outcomesRaw = m.outcomes && m.outcomes.length ? m.outcomes : '["Up","Down"]';
+          const outcomes = parseMaybeJsonArray(outcomesRaw);
+          const upIdx = outcomes.findIndex(o => /up/i.test(o));
+          const upPrice = prices[upIdx >= 0 ? upIdx : 0];
+          statusEl.textContent = 'live (REST)';
+          applyRealUpPrice(upPrice);
+        }
+      } catch (e) {
+        statusEl.textContent = 'reconnecting…';
+        console.warn('[poly5m] REST poll failed', e);
+      }
+    }, 3000);
+  }
+
+  // ---------- Real trade count (Data API) ----------
+  // Each market's conditionId is specific to that one 5-minute question, so
+  // every trade the Data API returns for it already belongs to this cycle —
+  // no time-window filtering needed, just an exact count of everything
+  // against that conditionId. The endpoint pages newest-first, max 500/page,
+  // with no total-count field, so an exact count means walking offsets until
+  // a page comes back short. maxPages is a safety cap, well above the
+  // ~3,000-trade volumes typically seen in one 5-minute window.
+  async function fetchExactTradeCount(forConditionId) {
+    const limit = 500;
+    const maxPages = 12;
+    let offset = 0;
+    let total = 0;
+    for (let page = 0; page < maxPages; page++) {
+      const trades = await bridgedFetch(`https://data-api.polymarket.com/trades?market=${forConditionId}&limit=${limit}&offset=${offset}`);
+      if (!Array.isArray(trades) || trades.length === 0) break;
+      total += trades.length;
+      if (trades.length < limit) break; // short page — that was the last one
+      offset += limit;
+    }
+    return total;
+  }
+
+  function renderHistory() {
+    if (!cycleHistory.length) { historyEl.innerHTML = '<div style="color:#555;">no completed cycles yet</div>'; return; }
+    historyEl.innerHTML = cycleHistory.map(c => {
+      const label = new Date(c.windowStart * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const countText = c.count == null ? '\u2026' : c.count.toLocaleString();
+      const tag = c.final ? '' : ' <span style="color:#666;">(settling)</span>';
+      return `<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>${label}</span><span>${countText}${tag}</span></div>`;
+    }).join('');
+  }
+
+  function startTradesPolling() {
+    if (tradesPollTimer) return;
+    const poll = async () => {
+      if (!conditionId) return;
+      try {
+        tradesEl.textContent = 'trades: counting\u2026';
+        const count = await fetchExactTradeCount(conditionId);
+        lastTradeCount = count;
+        tradesEl.textContent = `trades: ${count.toLocaleString()}`;
+      } catch (e) {
+        console.warn('[poly5m] trades poll failed', e);
+      }
+    };
+    poll();
+    tradesPollTimer = setInterval(poll, 5000);
+  }
+
+  // Trading continues for roughly 60–120s past a window's official close as
+  // resolved positions get swept, so a count taken exactly at rollover would
+  // undercount the finished cycle. Snapshot immediately (so the history list
+  // updates right away), then take one more pass ~90s later and overwrite
+  // that entry once the trailing trades have settled.
+  function finalizeCycle(windowStart, forConditionId, immediateCount) {
+    if (!forConditionId) return;
+    const entry = { windowStart, count: immediateCount, final: false };
+    cycleHistory.unshift(entry);
+    cycleHistory = cycleHistory.slice(0, MAX_HISTORY);
+    renderHistory();
+
+    setTimeout(async () => {
+      try {
+        const finalCount = await fetchExactTradeCount(forConditionId);
+        entry.count = finalCount;
+        entry.final = true;
+        renderHistory();
+      } catch (e) {
+        console.warn('[poly5m] cycle finalize count failed', e);
+        entry.final = true; // stop showing "(settling)" even if the last refresh failed
+        renderHistory();
+      }
+    }, 90000);
+  }
+
+  // Called every time the 5-minute window rolls over (including the
+  // first load), so the bridge always points at whichever Polymarket
+  // market is actually live right now, not a stale one from last cycle.
+  async function startNewCycle(windowStart) {
+    const prevWindowStart = currentWindowStart;
+    const prevConditionId = conditionId;
+    const prevCount = lastTradeCount;
+
+    teardownSources();
+    realUpPrice = null;
+    marketSlug = null; upTokenId = null; downTokenId = null; conditionId = null;
+    lastTradeCount = null;
+    statusEl.textContent = 'connecting…';
+    tradesEl.textContent = 'trades: —';
+
+    if (prevConditionId && prevWindowStart != null) {
+      finalizeCycle(prevWindowStart, prevConditionId, prevCount);
+    }
+
+    const slug = `btc-updown-5m-${windowStart}`;
+    const ok = await resolveActiveMarket(slug);
+    if (ok) {
+      connectClobWs();
+      startTradesPolling();
+    } else {
+      marketSlug = slug;
+      marketUrl = `https://polymarket.com/event/${slug}`;
+      startGammaRestPolling();
+    }
+  }
+  renderHistory();
+
+  [upBtn, downBtn].forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (marketUrl) window.open(marketUrl, '_blank');
+    });
+  });
+})();
+</script>
+
+<!-- =====================================================================
+     SIGNAL ENGINE — adaptive UP/DOWN/FLAT predictor.
+     Reads the page's own live data (nothing new fetched): the global
+     `tradeBuffer` / `minuteBuckets` / `sumBuckets()` from the first
+     script block for buy/sell transaction counts + net volume across
+     every panel window (1s/5s/10s/15s/30s/1h), and the Polymarket
+     Up/Down odds + trade count via the DOM the second script block
+     already renders. It measures the live correlation between each
+     panel's net-transactions / net-volume and actual price movement,
+     uses that correlation to weight its own decision logic, grades
+     itself against real outcomes, and keeps a memory of market
+     "regimes" so it can recognize and recall a pattern it has seen
+     succeed before. Entirely additive — does not modify any state
+     used by the panels above.
+     ===================================================================== -->
+<script>
+(function(){
+"use strict";
+
+const PANELS = [
+  { id: '1s',  ms: 1000,    label: '1s',  hasTx: true  },
+  { id: '5s',  ms: 5000,    label: '5s',  hasTx: true  },
+  { id: '10s', ms: 10000,   label: '10s', hasTx: true  },
+  { id: '15s', ms: 15000,   label: '15s', hasTx: true  },
+  { id: '30s', ms: 30000,   label: '30s', hasTx: true  },
+  { id: '1h',  ms: 3600000, label: '1h',  hasTx: true  }
+];
+const FEATURE_KEYS = [];
+PANELS.forEach(p => { FEATURE_KEYS.push('tx_'+p.id, 'vol_'+p.id); });
+FEATURE_KEYS.push('poly');
+
+function $(id){ return document.getElementById(id); }
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function nowStr(){ return new Date().toLocaleTimeString(undefined,{hour12:false}); }
+
+// ---------------------------------------------------------------
+// Piggyback on the page's own trade flow: wrap the global
+// handleTrade() (declared in the first script block) so this engine
+// can maintain a trailing-hour BUY/SELL *transaction count* alongside
+// the trailing-hour *volume* the page already tracks in minuteBuckets
+// (that Map only stores volume, not counts, so it's extended here
+// rather than duplicated). The original handleTrade still runs first,
+// untouched — this only adds bookkeeping after it.
+// ---------------------------------------------------------------
+const hourTxBuckets = new Map(); // minuteKey -> {buy, sell}
+function hourMinuteKey(t){ return Math.floor(t/60000); }
+function pruneHourTx(now){
+  const cutoff = hourMinuteKey(now - 3600000);
+  for(const k of hourTxBuckets.keys()){ if(k < cutoff) hourTxBuckets.delete(k); }
+}
+if(typeof handleTrade === 'function'){
+  const _origHandleTrade = handleTrade;
+  handleTrade = function(price, qty, side){
+    _origHandleTrade(price, qty, side);
+    const now = Date.now();
+    const key = hourMinuteKey(now);
+    let b = hourTxBuckets.get(key);
+    if(!b){ b = {buy:0, sell:0}; hourTxBuckets.set(key, b); }
+    if(side==='buy') b.buy++; else b.sell++;
+  };
+}
+function hourTxTotals(){
+  let buy=0, sell=0;
+  for(const b of hourTxBuckets.values()){ buy+=b.buy; sell+=b.sell; }
+  return {buy, sell};
+}
+
+// ---------------------------------------------------------------
+// Panel flow readers — everything here reads shared state from the
+// first script block (tradeBuffer, sumBuckets, hourDataReady), it
+// never re-fetches anything.
+// ---------------------------------------------------------------
+function subWindowFlow(ms, nowOverride){
+  const now = nowOverride!=null ? nowOverride : Date.now();
+  const cutoff = now-ms;
+  let buy=0, sell=0, buyVol=0, sellVol=0;
+  for(let i=tradeBuffer.length-1;i>=0;i--){
+    const tr = tradeBuffer[i];
+    if(tr.t > now) continue; // skip anything "in the future" relative to the clock in use (matters during backfill replay)
+    if(tr.t < cutoff) break;
+    if(tr.side==='buy'){ buy++; buyVol+=tr.qty; } else { sell++; sellVol+=tr.qty; }
+  }
+  return {buy, sell, buyVol, sellVol};
+}
+function panelFlow(panel, nowOverride){
+  if(panel.ms <= 30000) return subWindowFlow(panel.ms, nowOverride);
+  // 1h panel: volumes from the page's own trailing-hour bucket sums,
+  // counts from this engine's parallel hourTxBuckets.
+  const vol = (typeof hourDataReady !== 'undefined' && hourDataReady && typeof sumBuckets==='function') ? sumBuckets() : {buyVol:0, sellVol:0};
+  const tx = hourTxTotals();
+  return { buy: tx.buy, sell: tx.sell, buyVol: vol.buyVol, sellVol: vol.sellVol };
+}
+
+function readPolymarket(){
+  const upEl = $('poly5mUpPct');
+  let probUp = 0.5;
+  if(upEl){
+    const v = parseFloat(upEl.textContent);
+    if(!isNaN(v)) probUp = clamp(v/100, 0.01, 0.99);
+  }
+  return probUp;
+}
+
+// ---------------------------------------------------------------
+// Market activity classifier — recognizes how busy the market is
+// right now (transaction count + traded BTC volume) relative to a
+// baseline this engine learns purely from monitoring its own tape,
+// not from any hardcoded thresholds. Every tick it measures a short
+// trailing window, folds it into a slow-decay running mean/variance
+// for both tx-rate and volume-rate, then expresses "now" as a
+// z-score against that self-built baseline. The baseline keeps
+// drifting with the market, so "normal" always means normal for
+// *this* session's recent history.
+// ---------------------------------------------------------------
+const ACT_WINDOW_MS = 20000;         // measurement window for "current" activity
+const ACT_ALPHA = 0.01;              // baseline learning rate (~ a couple minutes to substantially re-center)
+const ACT_MIN_SAMPLES = 45;          // ticks of monitoring required before the baseline is trusted
+const ACT_LEVELS = ['very_low','low','normal','high','very_high','aggressive'];
+let activityBaseline = { txMean: null, txVar: 0, volMean: null, volVar: 0, n: 0 };
+let lastActivity = { txPerSec: 0, volPerSec: 0, z: null, level: 'calibrating' };
+
+function updateActivityBaseline(txPerSec, volPerSec){
+  if(activityBaseline.txMean == null){
+    activityBaseline.txMean = txPerSec;
+    activityBaseline.volMean = volPerSec;
+    activityBaseline.txVar = Math.max(0.01, txPerSec*txPerSec*0.05);
+    activityBaseline.volVar = Math.max(0.0001, volPerSec*volPerSec*0.05);
+  } else {
+    const dTx = txPerSec - activityBaseline.txMean;
+    activityBaseline.txMean += ACT_ALPHA*dTx;
+    activityBaseline.txVar = Math.max(1e-6, (1-ACT_ALPHA)*(activityBaseline.txVar + ACT_ALPHA*dTx*dTx));
+    const dVol = volPerSec - activityBaseline.volMean;
+    activityBaseline.volMean += ACT_ALPHA*dVol;
+    activityBaseline.volVar = Math.max(1e-8, (1-ACT_ALPHA)*(activityBaseline.volVar + ACT_ALPHA*dVol*dVol));
+  }
+  activityBaseline.n++;
+}
+
+function classifyActivityLevel(z){
+  if(z == null) return 'calibrating';
+  if(z <= -1.25) return 'very_low';
+  if(z <= -0.4)  return 'low';
+  if(z <= 0.4)   return 'normal';
+  if(z <= 1.25)  return 'high';
+  if(z <= 2.25)  return 'very_high';
+  return 'aggressive';
+}
+
+// How much the recognized activity level should scale prediction
+// confidence: thin/quiet tape is noisier and less trustworthy, solid
+// participation earns more trust, and an aggressive spike is pulled
+// back in slightly rather than chased at full confidence (spikes are
+// exhaustion/reversal-prone as often as they're continuation).
+function activityConfidenceMultiplier(level){
+  switch(level){
+    case 'very_low':  return 0.85;
+    case 'low':        return 0.93;
+    case 'normal':     return 1.00;
+    case 'high':       return 1.08;
+    case 'very_high':  return 1.15;
+    case 'aggressive': return 0.92;
+    default:           return 1.00; // still calibrating — stay neutral
+  }
+}
+
+function sampleActivity(nowOverride){
+  const flow = subWindowFlow(ACT_WINDOW_MS, nowOverride);
+  const windowSec = ACT_WINDOW_MS/1000;
+  const txPerSec = (flow.buy+flow.sell)/windowSec;
+  const volPerSec = (flow.buyVol+flow.sellVol)/windowSec;
+  updateActivityBaseline(txPerSec, volPerSec);
+  let z = null;
+  if(activityBaseline.n >= ACT_MIN_SAMPLES){
+    const txSd = Math.sqrt(activityBaseline.txVar), volSd = Math.sqrt(activityBaseline.volVar);
+    const zTx = txSd>0 ? (txPerSec-activityBaseline.txMean)/txSd : 0;
+    const zVol = volSd>0 ? (volPerSec-activityBaseline.volMean)/volSd : 0;
+    z = (zTx+zVol)/2;
+  }
+  lastActivity = { txPerSec, volPerSec, z, level: classifyActivityLevel(z) };
+}
+
+// ---------------------------------------------------------------
+// Rolling price history (sampled every tick from the page's own
+// `lastPrice`) — used both for correlation windows and for grading.
+// ---------------------------------------------------------------
+let priceHistory = []; // {t,p}
+function priceAt(msAgo, nowOverride){
+  const now = nowOverride!=null ? nowOverride : Date.now();
+  const target = now-msAgo;
+  let best=null, bestDiff=Infinity;
+  for(let i=priceHistory.length-1;i>=0;i--){
+    if(priceHistory[i].t > now) continue; // skip anything "in the future" relative to the clock in use
+    const d = Math.abs(priceHistory[i].t-target);
+    if(d<bestDiff){ bestDiff=d; best=priceHistory[i]; }
+    if(priceHistory[i].t < target-5000) break;
+  }
+  return best ? best.p : null;
+}
+
+// ---------------------------------------------------------------
+// Correlation engine — for every panel, keep a rolling series of
+// (netTx, netVolume, price-change-over-that-same-window) samples and
+// compute a live Pearson correlation. This is what "studies the
+// numbers" to decide how much to trust each panel/metric.
+// ---------------------------------------------------------------
+const MAX_CORR_SAMPLES = 180; // ~3 minutes at 1s sampling
+let panelSeries = {}; // id -> {tx:[], vol:[], chg:[]}
+PANELS.forEach(p => panelSeries[p.id] = {tx:[], vol:[], chg:[]});
+let polySeries = {skew:[], chg:[]};
+let correlations = {}; // id -> {tx:r, vol:r}
+let polyCorr = 0;
+
+function pearson(xs, ys){
+  const n = Math.min(xs.length, ys.length);
+  if(n < 8) return 0;
+  let sx=0, sy=0;
+  for(let i=0;i<n;i++){ sx+=xs[i]; sy+=ys[i]; }
+  const mx = sx/n, my = sy/n;
+  let num=0, dx2=0, dy2=0;
+  for(let i=0;i<n;i++){
+    const dx = xs[i]-mx, dy = ys[i]-my;
+    num += dx*dy; dx2 += dx*dx; dy2 += dy*dy;
+  }
+  const denom = Math.sqrt(dx2*dy2);
+  if(denom === 0) return 0;
+  return clamp(num/denom, -1, 1);
+}
+
+function sampleCorrelationInputs(nowOverride){
+  const price = (typeof lastPrice === 'number') ? lastPrice : null;
+  if(price==null) return;
+  PANELS.forEach(p=>{
+    const flow = panelFlow(p, nowOverride);
+    const netTx = flow.buy - flow.sell;
+    const netVol = flow.buyVol - flow.sellVol;
+    const priceBefore = priceAt(p.ms, nowOverride);
+    const chgPct = priceBefore ? ((price-priceBefore)/priceBefore)*100 : 0;
+    const s = panelSeries[p.id];
+    s.tx.push(netTx); s.vol.push(netVol); s.chg.push(chgPct);
+    if(s.tx.length > MAX_CORR_SAMPLES){ s.tx.shift(); s.vol.shift(); s.chg.shift(); }
+  });
+  const probUp = readPolymarket();
+  const skew = (probUp-0.5)*2;
+  const priceBefore30 = priceAt(30000, nowOverride);
+  const chg30 = priceBefore30 ? ((price-priceBefore30)/priceBefore30)*100 : 0;
+  polySeries.skew.push(skew); polySeries.chg.push(chg30);
+  if(polySeries.skew.length > MAX_CORR_SAMPLES){ polySeries.skew.shift(); polySeries.chg.shift(); }
+}
+
+function recomputeCorrelations(){
+  PANELS.forEach(p=>{
+    const s = panelSeries[p.id];
+    correlations[p.id] = { tx: pearson(s.tx, s.chg), vol: pearson(s.vol, s.chg) };
+  });
+  polyCorr = pearson(polySeries.skew, polySeries.chg);
+}
+
+// ---------------------------------------------------------------
+// State — weights, regimes, history, settings. Persisted separately
+// from the page's own lifetime flow log.
+// ---------------------------------------------------------------
+const LS_KEY = 'signalEngineState_v1';
+function freshWeights(){ const w={}; FEATURE_KEYS.forEach(k=> w[k]=1/FEATURE_KEYS.length); return w; }
+let regimeSeq = 1;
+function makeRegime(name, weights, centroid){
+  return { id: regimeSeq++, name: name, weights: Object.assign({},weights),
+           centroid: centroid || Object.fromEntries(FEATURE_KEYS.map(k=>[k,0])),
+           samples:0, correct:0, lastSeen: Date.now(), created: Date.now() };
+}
+let state = {
+  weights: freshWeights(),
+  confGain: 1.0,
+  scoreThresh: 0.05,
+  regimes: [],
+  activeRegimeId: null,
+  history: [],
+  settings: { tolerancePct: 0.008, horizonSec: 30, rollWindow: 30, lr: 0.04 },
+  stats: { totalGraded:0, totalCorrect:0 }
+};
+let __savedLS = null; // raw parsed localStorage payload, kept around so vars declared later (feedRows) can restore from it without a temporal-dead-zone issue
+(function initFromLS(){
+  let saved=null;
+  try{ saved = JSON.parse(localStorage.getItem(LS_KEY)); }catch(e){}
+  __savedLS = saved;
+  if(saved){
+    if(saved.weights) state.weights = saved.weights;
+    if(typeof saved.confGain==='number') state.confGain = saved.confGain;
+    if(typeof saved.scoreThresh==='number') state.scoreThresh = saved.scoreThresh;
+    if(Array.isArray(saved.regimes) && saved.regimes.length){
+      state.regimes = saved.regimes;
+      regimeSeq = Math.max(...saved.regimes.map(r=>r.id))+1;
+    }
+    if(saved.activeRegimeId) state.activeRegimeId = saved.activeRegimeId;
+    if(Array.isArray(saved.history)) state.history = saved.history;
+    if(saved.settings) state.settings = Object.assign(state.settings, saved.settings);
+    if(saved.stats) state.stats = saved.stats;
+    // Live-learned/monitored memory — correlation samples & results,
+    // the market-activity baseline, and the engine log — restored
+    // here too so a refresh doesn't drop back to "calibrating"/blank
+    // while backfill re-warms things; backfill will only refine this
+    // further, never replace it with less than what was already known.
+    if(saved.panelSeries) panelSeries = saved.panelSeries;
+    if(saved.polySeries) polySeries = saved.polySeries;
+    if(saved.correlations) correlations = saved.correlations;
+    if(typeof saved.polyCorr==='number') polyCorr = saved.polyCorr;
+    if(saved.activityBaseline && typeof saved.activityBaseline.n==='number') activityBaseline = saved.activityBaseline;
+  }
+  if(!state.regimes.length){
+    const r = makeRegime('Regime #1 · baseline', state.weights);
+    state.regimes.push(r); state.activeRegimeId = r.id;
+  }
+})();
+let saveTimer=null;
+function scheduleSave(){ if(saveTimer) clearTimeout(saveTimer); saveTimer=setTimeout(saveState, 500); }
+function saveState(){
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      weights: state.weights, confGain: state.confGain, scoreThresh: state.scoreThresh,
+      regimes: state.regimes, activeRegimeId: state.activeRegimeId,
+      history: state.history.slice(-300), settings: state.settings, stats: state.stats,
+      panelSeries, polySeries, correlations, polyCorr, activityBaseline,
+      feedRows: feedRows.slice(-150)
+    }));
+  }catch(e){}
+  writeLinkedFile(); // fire-and-forget; no-op if no real file is linked (see Linked data file section below)
+}
+function activeRegime(){ return state.regimes.find(r=>r.id===state.activeRegimeId) || state.regimes[0]; }
+
+// ---------------------------------------------------------------
+// Feature vector + scoring — each feature is gated by how strongly
+// (measured, live) that panel/metric has actually been correlating
+// with price movement, so a panel currently showing no real
+// predictive relationship contributes less regardless of its raw
+// weight.
+// ---------------------------------------------------------------
+function corrGate(key){
+  let r = 0;
+  if(key==='poly') r = polyCorr;
+  else {
+    const [kind, id] = key.split('_');
+    const c = correlations[id];
+    if(c) r = kind==='tx' ? c.tx : c.vol;
+  }
+  return 0.4 + 0.6*clamp(Math.abs(r),0,1);
+}
+
+function currentFeatureVector(nowOverride){
+  const f = {};
+  PANELS.forEach(p=>{
+    const flow = panelFlow(p, nowOverride);
+    const totalTx = flow.buy+flow.sell;
+    f['tx_'+p.id] = totalTx>0 ? (flow.buy-flow.sell)/totalTx : 0;
+    const netVol = flow.buyVol - flow.sellVol;
+    const scale = Math.max(0.05, flow.buyVol+flow.sellVol);
+    f['vol_'+p.id] = clamp(netVol/scale, -1, 1);
+  });
+  const probUp = readPolymarket();
+  f.poly = (probUp-0.5)*2;
+  return f;
+}
+
+function score(features, weights){
+  let s=0;
+  FEATURE_KEYS.forEach(k=> s += (weights[k]||0) * (features[k]||0) * corrGate(k));
+  return s;
+}
+function classify(s, thresh){ return s>thresh ? 'UP' : s<-thresh ? 'DOWN' : 'FLAT'; }
+function cosineSim(a,b){
+  let dot=0, na=0, nb=0;
+  FEATURE_KEYS.forEach(k=>{ dot+=a[k]*b[k]; na+=a[k]*a[k]; nb+=b[k]*b[k]; });
+  if(na===0||nb===0) return 0;
+  return dot/(Math.sqrt(na)*Math.sqrt(nb));
+}
+
+// ---------------------------------------------------------------
+// Prediction lifecycle
+// ---------------------------------------------------------------
+let feedRows=[];
+if(__savedLS && Array.isArray(__savedLS.feedRows)) feedRows = __savedLS.feedRows;
+function logFeed(msg, cls){
+  feedRows.push({t:nowStr(), msg, cls:cls||'sys'});
+  if(feedRows.length>150) feedRows=feedRows.slice(-150);
+  renderFeed();
+}
+function renderFeed(){
+  $('sigFeed').innerHTML = feedRows.slice().reverse().map(r=>
+    `<div class="sig-row"><span class="sig-t">${r.t}</span><span class="sig-msg ${r.cls}">${r.msg}</span></div>`
+  ).join('');
+}
+
+let pending = null;
+let recentAccuracyWindow = [];
+
+function openPrediction(){
+  const features = currentFeatureVector();
+  const s = score(features, state.weights);
+  const predLabel = classify(s, state.scoreThresh);
+  const actLevel = lastActivity.level;
+  const confRaw = 50 + Math.min(Math.abs(s),1.2)*45*state.confGain*activityConfidenceMultiplier(actLevel);
+  const predConfidence = Math.round(clamp(confRaw,50,99));
+  pending = { t0: Date.now(), price0: lastPrice, features, scoreVal:s,
+              predLabel, predConfidence, regimeId: state.activeRegimeId, activityLevel: actLevel };
+  renderHero();
+  logFeed(`New call opened: <b class="${predLabel.toLowerCase()}">${predLabel}</b> @ ${predConfidence}% confidence (entry $${lastPrice.toFixed(2)}) · market ${actLevel.replace('_',' ')}.`, predLabel.toLowerCase());
+}
+
+function gradeAndRecord(pred, priceNow, tsNow, timeLabel, source){
+  const changePct = ((priceNow-pred.price0)/pred.price0)*100;
+  const tol = state.settings.tolerancePct;
+  const actualLabel = changePct>tol ? 'UP' : changePct<-tol ? 'DOWN' : 'FLAT';
+  const correct = actualLabel === pred.predLabel;
+  const record = { time: timeLabel, predLabel: pred.predLabel, predConfidence: pred.predConfidence,
+                    actualLabel, changePct, correct, features: pred.features, ts: tsNow,
+                    activityLevel: pred.activityLevel || 'calibrating' };
+  if(source) record.source = source;
+  state.history.push(record);
+  if(state.history.length>500) state.history = state.history.slice(-400);
+  state.stats.totalGraded++; if(correct) state.stats.totalCorrect++;
+  recentAccuracyWindow.push(correct);
+  if(recentAccuracyWindow.length>15) recentAccuracyWindow = recentAccuracyWindow.slice(-15);
+
+  const reg = state.regimes.find(r=>r.id===pred.regimeId) || activeRegime();
+  reg.samples++; if(correct) reg.correct++; reg.lastSeen = tsNow;
+  const a=0.15;
+  FEATURE_KEYS.forEach(k=> reg.centroid[k] = reg.centroid[k]*(1-a) + pred.features[k]*a);
+
+  learnFromOutcome(pred, actualLabel);
+  return record;
+}
+
+function resolvePrediction(){
+  if(!pending || typeof lastPrice !== 'number') return;
+  const record = gradeAndRecord(pending, lastPrice, Date.now(), nowStr());
+  detectPatternChange();
+
+  pending = null;
+  renderHistoryRow(record);
+  renderHero(); renderWeights(); renderRegimes();
+  scheduleSave();
+}
+
+function rollingSuccessRate(){
+  const w = state.settings.rollWindow;
+  const recent = state.history.slice(-w);
+  if(!recent.length) return null;
+  return (recent.filter(r=>r.correct).length/recent.length)*100;
+}
+function rollingAvgConfidence(){
+  const w = state.settings.rollWindow;
+  const recent = state.history.slice(-w);
+  if(!recent.length) return null;
+  return recent.reduce((a,r)=>a+r.predConfidence,0)/recent.length;
+}
+
+function learnFromOutcome(pred, actualLabel){
+  const target = actualLabel==='UP'?1:actualLabel==='DOWN'?-1:0;
+  const error = target - clamp(pred.scoreVal,-1,1);
+  const lr = state.settings.lr;
+  FEATURE_KEYS.forEach(k=>{
+    const grad = error * pred.features[k] * corrGate(k);
+    state.weights[k] = state.weights[k] + lr*grad;
+  });
+  let sumAbs=0; FEATURE_KEYS.forEach(k=> sumAbs+=Math.abs(state.weights[k]));
+  if(sumAbs>0) FEATURE_KEYS.forEach(k=> state.weights[k] = state.weights[k]/sumAbs);
+
+  const succ = rollingSuccessRate(), conf = rollingAvgConfidence();
+  if(succ!=null && conf!=null){
+    state.confGain = clamp(state.confGain + ((succ-conf)/100)*0.06, 0.5, 2.0);
+  }
+  if(succ!=null && state.stats.totalGraded % 5 === 0){
+    state.scoreThresh = clamp(state.scoreThresh * (succ<80 ? 0.96 : 1.01), 0.01, 0.5);
+  }
+}
+
+function detectPatternChange(){
+  if(recentAccuracyWindow.length < 10) return;
+  const acc = recentAccuracyWindow.reduce((a,b)=>a+(b?1:0),0)/recentAccuracyWindow.length;
+  if(acc >= 0.40) return;
+  const recent = state.history.slice(-10);
+  const centroid = Object.fromEntries(FEATURE_KEYS.map(k=>[k,0]));
+  recent.forEach(r=> FEATURE_KEYS.forEach(k=> centroid[k]+=r.features[k]));
+  FEATURE_KEYS.forEach(k=> centroid[k]/=recent.length);
+
+  let best=null, bestScore=-2;
+  state.regimes.forEach(r=>{
+    if(r.id===state.activeRegimeId || r.samples<5) return;
+    const sim = cosineSim(centroid, r.centroid);
+    const successRate = r.correct/r.samples;
+    const combo = sim*0.7 + successRate*0.3;
+    if(combo>bestScore){ bestScore=combo; best=r; }
+  });
+
+  if(best && bestScore>0.35){
+    const oldName = activeRegime().name;
+    state.activeRegimeId = best.id;
+    state.weights = Object.assign({}, best.weights);
+    logFeed(`Pattern shift detected (recent accuracy ${Math.round(acc*100)}%) — reverted from <b>${oldName}</b> to <b>${best.name}</b> (prior success ${Math.round((best.correct/Math.max(1,best.samples))*100)}%).`, 'sys');
+  } else {
+    const newRegime = makeRegime('Regime #'+regimeSeq+' · '+nowStr(), state.weights, centroid);
+    state.regimes.push(newRegime);
+    state.activeRegimeId = newRegime.id;
+    logFeed(`Pattern shift detected (recent accuracy ${Math.round(acc*100)}%) — no close match in memory, opened <b>${newRegime.name}</b> to learn the new pattern.`, 'sys');
+  }
+  recentAccuracyWindow = [];
+  renderRegimes();
+}
+
+// ---------------------------------------------------------------
+// Rendering
+// ---------------------------------------------------------------
+function setBarAndTag(barId, tagId, val){
+  const bar=$(barId), tag=$(tagId);
+  if(val==null){ bar.style.width='0%'; bar.className='sig-barfill low'; tag.textContent='target 80%'; tag.className='sig-tag'; return; }
+  bar.style.width = clamp(val,0,100)+'%';
+  bar.className = 'sig-barfill ' + (val>=80?'good':val>=60?'mid':'low');
+  tag.textContent = val>=80 ? 'target reached ✓' : 'target 80%';
+  tag.className = 'sig-tag' + (val>=80?' hit':'');
+}
+function renderHero(){
+  const label = pending ? pending.predLabel : (state.history.length ? state.history[state.history.length-1].predLabel : null);
+  const conf = pending ? pending.predConfidence : (state.history.length ? state.history[state.history.length-1].predConfidence : null);
+  if(label){
+    const big=$('sigPredBig'), arrow=$('sigPredArrow'), text=$('sigPredText'), sub=$('sigPredSub');
+    big.className = 'sig-predBig ' + label.toLowerCase();
+    arrow.textContent = label==='UP'?'▲':label==='DOWN'?'▼':'●';
+    text.textContent = label;
+    if(pending){
+      const elapsed = Math.round((Date.now()-pending.t0)/1000);
+      sub.textContent = `Open call · ${conf}% confidence · resolves in ${Math.max(0,state.settings.horizonSec-elapsed)}s · entry $${pending.price0.toFixed(2)}`;
+    } else {
+      sub.textContent = `Last resolved call · ${conf}% confidence`;
+    }
+  }
+  // Activity level tied to the call actually shown above (the level
+  // that shaped its confidence), falling back to the live current
+  // reading when there's no call yet.
+  const heroLevel = pending ? pending.activityLevel
+    : (state.history.length ? (state.history[state.history.length-1].activityLevel || 'calibrating') : lastActivity.level);
+  const heroBadge = $('sigHeroActBadge');
+  heroBadge.className = 'sig-actbadge ' + heroLevel;
+  heroBadge.textContent = 'Market: ' + heroLevel.replace('_',' ').toUpperCase();
+
+  const succ = rollingSuccessRate(), conf2 = rollingAvgConfidence();
+  $('sigSuccessVal').textContent = succ==null?'--%':Math.round(succ)+'%';
+  $('sigConfVal').textContent = conf2==null?'--%':Math.round(conf2)+'%';
+  $('sigSuccessCount').textContent = succ==null?'':`(${Math.min(state.settings.rollWindow, state.history.length)} calls)`;
+  setBarAndTag('sigSuccessBar','sigSuccessTag', succ);
+  setBarAndTag('sigConfBar','sigConfTag', conf2);
+}
+
+function renderActivity(){
+  const badge = $('sigActBadge'), sub = $('sigActSub');
+  const level = lastActivity.level;
+  badge.className = 'sig-actbadge ' + level;
+  badge.textContent = level.replace('_',' ').toUpperCase();
+  if(level === 'calibrating'){
+    sub.textContent = `learning baseline… (${activityBaseline.n}/${ACT_MIN_SAMPLES})`;
+  } else {
+    const mult = activityConfidenceMultiplier(level);
+    sub.textContent = `z ${lastActivity.z>=0?'+':''}${lastActivity.z.toFixed(2)} · confidence ×${mult.toFixed(2)}`;
+  }
+  $('sigActTxNow').textContent = lastActivity.txPerSec.toFixed(2)+'/s';
+  $('sigActVolNow').textContent = lastActivity.volPerSec.toFixed(4);
+  if(activityBaseline.txMean != null){
+    $('sigActTxBase').textContent = `baseline: ${activityBaseline.txMean.toFixed(2)} ± ${Math.sqrt(activityBaseline.txVar).toFixed(2)}/s`;
+    $('sigActVolBase').textContent = `baseline: ${activityBaseline.volMean.toFixed(4)} ± ${Math.sqrt(activityBaseline.volVar).toFixed(4)}`;
+  }
+}
+
+function renderCorrelations(){
+  const tbody = $('sigCorrTbody');
+  function corrCell(r){
+    const pct = Math.min(50, Math.abs(r)*50);
+    const cls = r>=0?'pos':'neg';
+    return `<div class="sig-corrbar-wrap"><span class="mono" style="width:34px;display:inline-block;">${r.toFixed(2)}</span>
+      <div class="sig-corrtrack"><div class="sig-corrmid"></div><div class="sig-corrfill ${cls}" style="width:${pct}%"></div></div></div>`;
+  }
+  let rows = PANELS.map(p=>{
+    const c = correlations[p.id] || {tx:0,vol:0};
+    return `<tr><td>${p.label}</td><td>${corrCell(c.tx)}</td><td>${corrCell(c.vol)}</td></tr>`;
+  }).join('');
+  rows += `<tr><td>Polymarket odds</td><td colspan="2">${corrCell(polyCorr)}</td></tr>`;
+  tbody.innerHTML = rows;
+}
+
+function renderWeights(){
+  const box = $('sigWeightsBox');
+  const rows = FEATURE_KEYS.slice().sort((a,b)=> Math.abs(state.weights[b])-Math.abs(state.weights[a]));
+  const nameFor = (k)=>{
+    if(k==='poly') return 'Polymarket odds';
+    const [kind,id] = k.split('_');
+    return (kind==='tx'?'Net Tx ':'Net Vol ')+id;
+  };
+  box.innerHTML = rows.map(k=>{
+    const w = state.weights[k];
+    const pctPos = w>0 ? Math.min(50, Math.abs(w)*50/0.5) : 0;
+    const pctNeg = w<0 ? Math.min(50, Math.abs(w)*50/0.5) : 0;
+    return `<div class="sig-wrow">
+      <div class="sig-wname">${nameFor(k)}</div>
+      <div class="sig-wtrack"><div class="sig-wmid"></div><div class="sig-wfillpos" style="width:${pctPos}%"></div><div class="sig-wfillneg" style="width:${pctNeg}%"></div></div>
+      <div class="sig-wval">${w>=0?'+':''}${w.toFixed(2)}</div>
+    </div>`;
+  }).join('');
+  $('sigConfGainVal').textContent = state.confGain.toFixed(2);
+  $('sigScoreThreshVal').textContent = state.scoreThresh.toFixed(3);
+}
+
+function renderRegimes(){
+  const act = activeRegime();
+  $('sigActiveRegimeName').textContent = act.name;
+  const succPct = act.samples ? Math.round((act.correct/act.samples)*100) : 0;
+  $('sigActiveRegimeMeta').textContent = `${act.samples} samples · ${act.samples? succPct+'% success' : 'no history yet'}`;
+  const tbody = $('sigRegimeTbody');
+  const rows = state.regimes.slice().sort((a,b)=>b.lastSeen-a.lastSeen);
+  tbody.innerHTML = rows.map(r=>{
+    const succ = r.samples ? Math.round((r.correct/r.samples)*100) : 0;
+    const isActive = r.id===state.activeRegimeId;
+    return `<tr><td>${r.name}</td><td>${r.samples}</td><td>${r.samples?succ+'%':'--'}</td>
+      <td style="color:#666;">${new Date(r.lastSeen).toLocaleTimeString(undefined,{hour12:false})}</td>
+      <td><span class="sig-regtag ${isActive?'active':'dormant'}">${isActive?'ACTIVE':'dormant'}</span></td></tr>`;
+  }).join('');
+}
+
+function historyRowHtml(r){
+  const cls = r.correct?'sig-correct':'sig-wrong';
+  const tag = r.source==='backfill' ? ' <span style="color:#e0a030;" title="Seeded from real historical trade replay on load, not a live-graded call">[backfill]</span>' : '';
+  const actLevel = r.activityLevel || 'calibrating';
+  return `<td style="color:#666;">${r.time}</td><td>${r.predLabel}${tag}</td><td>${r.predConfidence}%</td>
+    <td><span class="sig-actbadge ${actLevel}" style="padding:1px 7px;font-size:9px;">${actLevel.replace('_',' ')}</span></td>
+    <td>${(r.changePct>=0?'+':'')+r.changePct.toFixed(4)}%</td>
+    <td class="${cls}">${r.correct?'✓ correct':'✗ miss'} <span style="color:#666;">(${r.actualLabel})</span></td>`;
+}
+function renderHistoryRow(record){
+  const tbody = $('sigPredTbody');
+  const row = document.createElement('tr');
+  row.innerHTML = historyRowHtml(record);
+  tbody.insertBefore(row, tbody.firstChild);
+  while(tbody.children.length>60) tbody.removeChild(tbody.lastChild);
+}
+function renderHistoryAll(){
+  const tbody = $('sigPredTbody'); tbody.innerHTML='';
+  state.history.slice(-60).reverse().forEach(r=>{
+    const row = document.createElement('tr');
+    row.innerHTML = historyRowHtml(r);
+    tbody.appendChild(row);
+  });
+}
+
+// ---------------------------------------------------------------
+// Settings wiring
+// ---------------------------------------------------------------
+function applySettingsUI(){
+  $('sigTolSlider').value = Math.round(state.settings.tolerancePct*1000);
+  $('sigTolVal').textContent = state.settings.tolerancePct.toFixed(3)+'%';
+  $('sigHorizonSlider').value = state.settings.horizonSec;
+  $('sigHorizonVal').textContent = state.settings.horizonSec+'s';
+  $('sigRollSlider').value = state.settings.rollWindow;
+  $('sigRollVal').textContent = state.settings.rollWindow;
+  $('sigLrSlider').value = Math.round(state.settings.lr*1000);
+  $('sigLrVal').textContent = state.settings.lr.toFixed(3);
+}
+$('sigTolSlider').addEventListener('input', e=>{ state.settings.tolerancePct = parseInt(e.target.value)/1000; $('sigTolVal').textContent = state.settings.tolerancePct.toFixed(3)+'%'; scheduleSave(); });
+$('sigHorizonSlider').addEventListener('input', e=>{ state.settings.horizonSec = parseInt(e.target.value); $('sigHorizonVal').textContent = state.settings.horizonSec+'s'; scheduleSave(); });
+$('sigRollSlider').addEventListener('input', e=>{ state.settings.rollWindow = parseInt(e.target.value); $('sigRollVal').textContent = state.settings.rollWindow; scheduleSave(); });
+$('sigLrSlider').addEventListener('input', e=>{ state.settings.lr = parseInt(e.target.value)/1000; $('sigLrVal').textContent = state.settings.lr.toFixed(3); scheduleSave(); });
+
+let running = true;
+$('sigBtnToggle').addEventListener('click', ()=>{
+  running = !running;
+  $('sigBtnToggle').textContent = running ? 'Pause Engine' : 'Resume Engine';
+  $('sigBtnToggle').className = 'sig-btn ' + (running?'primary':'');
+  logFeed(running?'Engine resumed.':'Engine paused.', 'sys');
+});
+$('sigBtnReset').addEventListener('click', ()=>{
+  if(!confirm('Reset all learned weights, correlation history, pattern memory, and prediction history? This cannot be undone.')) return;
+  state.weights = freshWeights();
+  state.confGain = 1.0; state.scoreThresh = 0.05;
+  regimeSeq = 1;
+  const r = makeRegime('Regime #1 · baseline', state.weights);
+  state.regimes = [r]; state.activeRegimeId = r.id;
+  state.history = []; state.stats = {totalGraded:0, totalCorrect:0};
+  recentAccuracyWindow = []; pending = null;
+  panelSeries = {}; PANELS.forEach(p=>panelSeries[p.id]={tx:[],vol:[],chg:[]});
+  polySeries = {skew:[],chg:[]}; correlations = {}; polyCorr = 0;
+  activityBaseline = { txMean: null, txVar: 0, volMean: null, volVar: 0, n: 0 };
+  lastActivity = { txPerSec: 0, volPerSec: 0, z: null, level: 'calibrating' };
+  saveState();
+  renderAll();
+  logFeed('Memory reset — engine restarted from baseline weights.', 'sys');
+  backfillEngine().then(renderAll);
+});
+// Full memory payload — everything saveState() persists — shared by
+// Export, the linked-file auto-save, and Import's restore logic so
+// all three always agree on exactly what "the engine's memory" is.
+function memoryPayload(){
+  return {
+    weights: state.weights, confGain: state.confGain, scoreThresh: state.scoreThresh,
+    regimes: state.regimes, activeRegimeId: state.activeRegimeId,
+    history: state.history, settings: state.settings, stats: state.stats,
+    panelSeries, polySeries, correlations, polyCorr, activityBaseline, feedRows,
+    exportedAt: Date.now()
+  };
+}
+function applyMemoryPayload(data){
+  state.weights = data.weights;
+  if(typeof data.confGain==='number') state.confGain = data.confGain;
+  if(typeof data.scoreThresh==='number') state.scoreThresh = data.scoreThresh;
+  state.regimes = (data.regimes && data.regimes.length) ? data.regimes : state.regimes;
+  regimeSeq = Math.max(1, ...state.regimes.map(r=>r.id))+1;
+  state.activeRegimeId = data.activeRegimeId || state.regimes[0].id;
+  if(Array.isArray(data.history)) state.history = data.history.slice(-400);
+  if(data.settings) state.settings = Object.assign(state.settings, data.settings);
+  if(data.stats) state.stats = data.stats;
+  if(data.panelSeries) panelSeries = data.panelSeries;
+  if(data.polySeries) polySeries = data.polySeries;
+  if(data.correlations) correlations = data.correlations;
+  if(typeof data.polyCorr==='number') polyCorr = data.polyCorr;
+  if(data.activityBaseline && typeof data.activityBaseline.n==='number') activityBaseline = data.activityBaseline;
+  if(Array.isArray(data.feedRows)) feedRows = data.feedRows;
+  pending = null; recentAccuracyWindow = [];
+}
+
+$('sigBtnExport').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(memoryPayload(),null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='signal-engine-memory-'+Date.now()+'.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  logFeed('Memory exported to a JSON backup file.', 'sys');
+});
+
+// Import Memory — restores a previously exported backup. This is
+// what makes the engine's memory durable beyond one browser's
+// localStorage: the file survives clearing site data, moving to a
+// different browser/machine, or opening the page from a different
+// path (each of which starts localStorage fresh on its own).
+$('sigBtnImport').addEventListener('click', ()=> $('sigImportInput').click());
+$('sigImportInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let data;
+    try{ data = JSON.parse(reader.result); }
+    catch(err){ $('sigImportStatus').textContent = 'Import failed — not a valid JSON file.'; return; }
+    if(!data || typeof data !== 'object' || !data.weights || !Array.isArray(data.regimes)){
+      $('sigImportStatus').textContent = 'Import failed — this file doesn\'t look like a SIGNAL engine memory export.';
+      return;
+    }
+    if(!confirm('Import this memory file? It will replace the engine\'s current weights, regimes, prediction history, correlations, and activity baseline with what\'s in the file. This cannot be undone.')) return;
+
+    applyMemoryPayload(data);
+    saveState();
+    renderAll();
+    const when = data.exportedAt ? new Date(data.exportedAt).toLocaleString() : 'unknown time';
+    $('sigImportStatus').textContent = `Imported memory exported ${when}.`;
+    logFeed(`Memory imported from backup file (exported ${when}) — weights, regimes, history, correlations, and activity baseline restored.`, 'sys');
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+// ---------------------------------------------------------------
+// Linked data file — an optional REAL file on disk (via the
+// browser's File System Access API) that the engine writes its full
+// memory to on every save, automatically, alongside localStorage.
+// This is what makes memory durable beyond this one browser profile:
+// the file exists independently on disk, so it survives clearing
+// site data, a browser reinstall, or moving to a different machine
+// (copy the file over, open this page there, and link it again).
+// Chromium-based browsers only (Chrome/Edge/Opera); everywhere else
+// falls back to the manual Export/Import buttons above.
+// ---------------------------------------------------------------
+let linkedFileHandle = null;
+const FS_SUPPORTED = typeof window.showSaveFilePicker === 'function';
+
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open('signalEngineFS', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('handles');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbGetHandle(){
+  try{
+    const db = await idbOpen();
+    return await new Promise((resolve,reject)=>{
+      const tx = db.transaction('handles','readonly');
+      const req = tx.objectStore('handles').get('linkedFile');
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  }catch(e){ return null; }
+}
+async function idbSetHandle(handle){
+  try{
+    const db = await idbOpen();
+    await new Promise((resolve,reject)=>{
+      const tx = db.transaction('handles','readwrite');
+      tx.objectStore('handles').put(handle, 'linkedFile');
+      tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+    });
+  }catch(e){}
+}
+function setLinkStatus(msg){ const el=$('sigLinkStatus'); if(el) el.textContent = msg; }
+
+async function writeLinkedFile(){
+  if(!linkedFileHandle) return;
+  try{
+    const writable = await linkedFileHandle.createWritable();
+    await writable.write(JSON.stringify(memoryPayload(), null, 2));
+    await writable.close();
+  }catch(e){
+    linkedFileHandle = null; // permission revoked or file moved/deleted — stop trying until re-linked
+    setLinkStatus('Linked file write failed — click "Link Data File" again to resume auto-save.');
+  }
+}
+
+async function linkDataFile(){
+  if(!FS_SUPPORTED){
+    setLinkStatus('This browser doesn\'t support direct file linking (Chrome/Edge only) — use Export/Import instead.');
+    return;
+  }
+  try{
+    const handle = await window.showSaveFilePicker({
+      suggestedName: 'signal-engine-memory.json',
+      types: [{ description: 'JSON', accept: {'application/json': ['.json']} }]
+    });
+    linkedFileHandle = handle;
+    await idbSetHandle(handle);
+    await writeLinkedFile();
+    setLinkStatus(`Linked to "${handle.name}" — every save now writes here automatically, in addition to localStorage.`);
+    logFeed(`Linked a real data file on disk ("${handle.name}") — full memory now auto-saves there on every save.`, 'sys');
+  }catch(e){
+    if(e.name !== 'AbortError') setLinkStatus('Could not link a file: ' + e.message);
+  }
+}
+$('sigBtnLinkFile').addEventListener('click', linkDataFile);
+
+// Try to silently reconnect to a previously linked file on load.
+// Browsers require permission to be re-confirmed each session for
+// security, but that's a quiet one-click prompt via the button below
+// rather than a full file picker, once a handle is already on file.
+(async function reconnectLinkedFile(){
+  if(!FS_SUPPORTED){
+    setLinkStatus('Direct file-linking needs Chrome or Edge — use Export/Import to back up memory in other browsers.');
+    return;
+  }
+  const handle = await idbGetHandle();
+  if(!handle) return;
+  try{
+    const perm = await handle.queryPermission({mode:'readwrite'});
+    if(perm === 'granted'){
+      linkedFileHandle = handle;
+      setLinkStatus(`Reconnected to "${handle.name}" — auto-saving there.`);
+    } else {
+      setLinkStatus(`Previously linked to "${handle.name}" — click "Link Data File" to reauthorize (browsers require this each session).`);
+    }
+  }catch(e){}
+})();
+
+// ---------------------------------------------------------------
+// Startup backfill — seed the engine from real recent trade history
+// (Binance's public aggTrades endpoint) instead of starting cold, by
+// replaying that real tape through the exact same scoring/learning
+// functions the live loop uses (sampleCorrelationInputs, score,
+// classify, learnFromOutcome, etc.), just driven off a simulated
+// clock instead of the real one.
+//
+// This is honest backtesting, not fabrication — every trade replayed
+// is a real trade that happened. But it's still NOT the same thing
+// as a live track record, so every row it produces is tagged
+// source:'backfill' in state.history. Nothing else about how those
+// rows are counted or displayed is changed — rollingSuccessRate(),
+// stats.totalCorrect/totalGraded etc. treat them identically to live
+// rows, exactly as they would if left unlabeled. The tag only means
+// you can always tell, later, which numbers came from real live
+// outcomes vs. this warm-start.
+// ---------------------------------------------------------------
+async function backfillEngine(){
+  try{
+    const res = await fetch('https://api.binance.com/api/v3/aggTrades?symbol=BTCUSDT&limit=1000');
+    const raw = await res.json();
+    if(!Array.isArray(raw) || raw.length < 20) throw new Error('not enough trade history returned');
+
+    const synthTrades = raw.map(t=>({
+      t: t.T, price: parseFloat(t.p), qty: parseFloat(t.q),
+      side: t.m ? 'sell' : 'buy' // m=true: buyer is maker -> taker (aggressor) sold
+    })).sort((a,b)=>a.t-b.t);
+
+    // Reloading the page re-fetches an overlapping window of the same
+    // recent trades each time. Without this, every reload would append
+    // another batch of backfilled rows on top of the last one, quietly
+    // inflating totalGraded/totalCorrect with repeats instead of
+    // reflecting a real, growing track record. Strip the previous
+    // backfill batch (and unwind its contribution to the stats) first,
+    // so backfill always represents just this load's window.
+    const oldBackfill = state.history.filter(r=>r.source==='backfill');
+    if(oldBackfill.length){
+      state.history = state.history.filter(r=>r.source!=='backfill');
+      state.stats.totalGraded -= oldBackfill.length;
+      state.stats.totalCorrect -= oldBackfill.filter(r=>r.correct).length;
+    }
+
+    // Fold the real tape into tradeBuffer/priceHistory/hourTxBuckets
+    // so panel readers + correlation sampling have real data to work
+    // from immediately, same shared state the live loop reads.
+    synthTrades.forEach(tr=>{
+      tradeBuffer.push({t:tr.t, side:tr.side, qty:tr.qty});
+      priceHistory.push({t:tr.t, p:tr.price});
+      const key = hourMinuteKey(tr.t);
+      let b = hourTxBuckets.get(key);
+      if(!b){ b={buy:0, sell:0}; hourTxBuckets.set(key, b); }
+      if(tr.side==='buy') b.buy++; else b.sell++;
+    });
+    // Real live trades can land in these same arrays *while* the fetch
+    // above was in flight (the WebSocket never pauses for it), which
+    // would otherwise leave a few genuinely-live entries sitting before
+    // this whole historical block — breaking the ascending-by-time order
+    // that refreshFlowPanels()'s trim and subWindowFlow()'s early-break
+    // scan both assume. Re-sort before anything else touches them.
+    tradeBuffer.sort((a,b)=>a.t-b.t);
+    priceHistory.sort((a,b)=>a.t-b.t);
+    if(priceHistory.length>2400) priceHistory = priceHistory.slice(-2400);
+    if(tradeBuffer.length>5000) tradeBuffer.splice(0, tradeBuffer.length-5000);
+
+    // Walk the real tape forward one simulated second at a time,
+    // re-using sampleCorrelationInputs/currentFeatureVector/score/
+    // classify/learnFromOutcome exactly as the live tick() loop does.
+    // (Note: the 1h panel and the Polymarket skew both read the
+    // page's live current state rather than a time-matched historical
+    // value — there's no historical feed for either here — so those
+    // two inputs reflect "now" throughout the replay. Everything else
+    // uses genuine time-matched history.)
+    const realLastPrice = lastPrice;
+    const t0 = synthTrades[0].t, t1 = synthTrades[synthTrades.length-1].t;
+    let simPending = null;
+    let graded = 0;
+    let priceIdx = 0; // moving pointer — synthTrades and simT both advance forward-only, so no need to rescan from the end each step
+    for(let simT=t0; simT<=t1; simT+=1000){
+      while(priceIdx+1 < synthTrades.length && synthTrades[priceIdx+1].t <= simT) priceIdx++;
+      if(synthTrades[priceIdx].t > simT) continue; // shouldn't happen once simT>=t0, but stay safe
+      const priceAtT = synthTrades[priceIdx].price;
+      lastPrice = priceAtT;
+      sampleCorrelationInputs(simT);
+      recomputeCorrelations();
+      sampleActivity(simT);
+
+      if(!simPending){
+        const features = currentFeatureVector(simT);
+        const s = score(features, state.weights);
+        const predLabel = classify(s, state.scoreThresh);
+        const actLevel = lastActivity.level;
+        const confRaw = 50 + Math.min(Math.abs(s),1.2)*45*state.confGain*activityConfidenceMultiplier(actLevel);
+        const predConfidence = Math.round(clamp(confRaw,50,99));
+        simPending = { t0: simT, price0: priceAtT, features, scoreVal:s, predLabel, predConfidence, regimeId: state.activeRegimeId, activityLevel: actLevel };
+      } else if(simT - simPending.t0 >= state.settings.horizonSec*1000){
+        gradeAndRecord(simPending, priceAtT, simT, new Date(simT).toLocaleTimeString(undefined,{hour12:false}), 'backfill');
+        graded++;
+        simPending = null;
+      }
+    }
+    lastPrice = realLastPrice; // hand control back to the live feed
+
+    if(state.history.length>500) state.history = state.history.slice(-400);
+    const spanMin = Math.max(1, Math.round((t1-t0)/60000));
+    if(graded>0){
+      logFeed(`Backfilled ${graded} resolved call${graded===1?'':'s'} from the last ~${spanMin} min of real Binance trade history (tagged as backfill, not live).`, 'sys');
+    } else {
+      logFeed('Trade history fetched but too short to resolve any backfilled calls yet — building live only.', 'sys');
+    }
+    saveState();
+  }catch(err){
+    logFeed('Backfill unavailable — engine starting cold, building live only.', 'sys');
+  }
+}
+
+// ---------------------------------------------------------------
+// Main loop
+// ---------------------------------------------------------------
+let lastCorrRecompute = 0;
+let lastAutoSave = 0;
+function tick(){
+  if(typeof lastPrice === 'number'){
+    priceHistory.push({t:Date.now(), p:lastPrice});
+    if(priceHistory.length>3600) priceHistory = priceHistory.slice(-2400);
+  }
+  pruneHourTx(Date.now());
+  sampleCorrelationInputs();
+  sampleActivity();
+  renderActivity();
+  if(Date.now()-lastCorrRecompute > 4000){ recomputeCorrelations(); renderCorrelations(); lastCorrRecompute = Date.now(); }
+  // Correlations/activity-baseline/log evolve every tick even when no
+  // prediction is being opened/resolved, so autosave periodically too —
+  // otherwise only prediction-driven saves would capture them and a
+  // refresh could still lose a few minutes of live-learned monitoring.
+  if(Date.now()-lastAutoSave > 5000){ saveState(); lastAutoSave = Date.now(); }
+
+  if(!running || typeof lastPrice !== 'number') return;
+
+  if(!pending){
+    openPrediction();
+  } else {
+    const elapsed = Date.now()-pending.t0;
+    if(elapsed >= state.settings.horizonSec*1000){ resolvePrediction(); }
+    else { renderHero(); }
+  }
+}
+
+function renderAll(){
+  applySettingsUI();
+  renderCorrelations();
+  renderActivity();
+  renderWeights();
+  renderRegimes();
+  renderHistoryAll();
+  renderHero();
+  renderFeed();
+}
+
+logFeed('SIGNAL engine initialized — reading live flow &amp; odds panels above.', 'sys');
+setInterval(tick, 1000);
+renderAll();
+backfillEngine().then(renderAll);
+window.addEventListener('beforeunload', saveState); // flush the latest state right before a refresh/close, not just the 5s autosave cadence
+
+})();
+</script>
+
+</body>
+</html>
